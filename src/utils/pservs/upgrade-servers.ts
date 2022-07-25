@@ -5,6 +5,12 @@ export async function main(ns: NS): Promise<void> {
     const purchased_servs = ns.getPurchasedServers();
     let split_target = "";
     let maxed_servers = 0;
+    const utils = [];
+    for(const filename of ns.ls("home")){
+        if(filename.startsWith("/utils/")){
+            utils.push(filename);
+        }
+    }
     while (maxed_servers < purchased_servs.length) { // Loop till all servers maxed
         for (let i = 0; i < purchased_servs.length; i++) { // Foreach purchased server
             for (let ram = target_ram; ram > ns.getServerMaxRam(purchased_servs[i]); ram = ram / 2) { // Count back from largest ram
@@ -24,6 +30,7 @@ export async function main(ns: NS): Promise<void> {
                         if (ram == target_ram) {
                             maxed_servers++;
                         }
+                        await ns.scp(utils, purchased_servs[i], "home");
                         await reset_hacks(ns, split_target);
                     }
                 }
@@ -37,13 +44,13 @@ async function reset_hacks(ns: NS, split_target: string): Promise<void> {
     ns.scriptKill("/split/hack.js", "home");
     ns.scriptKill("/split/grow.js", "home");
     ns.scriptKill("/split/weaken.js", "home");
-    let rehack = ns.exec("/utils/root.js", "home");
+    let rehack = ns.run("/utils/root.js");
     while (ns.isRunning(rehack) === true) {
         await ns.sleep(1000);
     }
-    rehack = ns.exec("/split/split.js", "home", 1, split_target);
+    rehack = ns.run("/split/split.js", 1, split_target, "-H");
     while (ns.isRunning(rehack) === true) {
-        await ns.sleep(1000);
+        await ns.sleep(500);
     }
 }
 

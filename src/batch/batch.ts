@@ -37,8 +37,8 @@ export async function main(ns: NS): Promise<void> {
 
     while (true) {
         ns.print(`Offsetting batch ${rand_token}`);
-        while (performance.now() + durations.w - time_offset <= last_batch_end + 3000) {
-            // next hack time <= last batch end + 3sec offset
+        while (performance.now() + durations.w - time_offset <= last_batch_end + 2000) {
+            // next hack time <= last batch end + arbritrary offset
             // If we deployed a batch now the hack would fire before the previous batch finished			
             await ns.sleep(time_offset);
         }
@@ -50,7 +50,7 @@ export async function main(ns: NS): Promise<void> {
             ns.print("Waiting for safe calibration");
             if (ns.getServer(target).moneyAvailable < ns.getServer(target).moneyMax) {
                 // Server money currently not maxed (between hack and grow of a batch)
-                await ns.sleep(time_offset * 3 + time_offset / 2);
+                await ns.sleep(time_offset * 3 + time_offset / 2); // end of batch + half offset
             }
             durations = calculateDuration(ns, target, time_offset);
             threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServer(target).moneyMax * hack_data.current));
