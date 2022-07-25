@@ -19,7 +19,7 @@ export async function main(ns: NS): Promise<void> {
         await ns.sleep(1000);
     }
 
-    const time_offset = 50;
+    const time_offset = 150;
     const hack_data = { current: Number(ns.args[1]) || 0.1, max: 1 }
     let currLevel = ns.getHackingLevel();
     let currRam = ns.getServer().maxRam;
@@ -54,6 +54,11 @@ export async function main(ns: NS): Promise<void> {
             }
             durations = calculateDuration(ns, target, time_offset);
             threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServer(target).moneyMax * hack_data.current));
+            threads.h = threads.h < 1 ? 1 : threads.h;
+            threads.w1 = Math.ceil(threads.h / 25);
+            const growth_multi = hack_data.current == 1 ? 2 : 1 / (1 - hack_data.current);
+            threads.g = Math.ceil(ns.growthAnalyze(target, growth_multi, ns.getServer().cpuCores));
+            threads.w2 = Math.ceil(threads.g / 12.5);
             currLevel = ns.getHackingLevel();
             calibration_flag = false;
         }
@@ -61,12 +66,6 @@ export async function main(ns: NS): Promise<void> {
             hack_data.max = 1; // Reset maximum
             currRam = ns.getServer().maxRam;
         }
-
-        threads.h = threads.h < 1 ? 1 : threads.h;
-        threads.w1 = Math.ceil(threads.h / 25);
-        const growth_multi = hack_data.current == 1 ? 2 : 1 / (1 - hack_data.current);
-        threads.g = Math.ceil(ns.growthAnalyze(target, growth_multi, ns.getServer().cpuCores));
-        threads.w2 = Math.ceil(threads.g / 12.5);
 
         if (await requiredRamTimeout(ns, threads, durations) === true) {
             ns.print("Timed out waiting for free RAM");
@@ -105,7 +104,7 @@ export function autocomplete(data: AutocompleteData): string[] {
  * @param {number} rand_token
  */
 function deploy(ns: NS, threads: Record<string, number>, target: string, durations: Record<string, number>, time_offset: number, rand_token: number): void {
-    const h_threads = threads.h - Math.ceil(threads.h * 0.05); // Avoid blowing past hack target
+    const h_threads = threads.h - Math.ceil(threads.h * 0.03); // Avoid blowing past hack target
     //ns.print(`Durations: ${JSON.stringify(durations)}`);
     ns.run("/batch/batch_h.js", h_threads || 1, target, durations.w - durations.h - time_offset, rand_token);
     ns.run("/batch/batch_w.js", threads.w1 || 1, target, 0, rand_token);
@@ -139,7 +138,7 @@ function hackDataChanged(ns: NS, threads: Record<string, number>, hack_data: Rec
  */
 async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): Promise<void> {
     ns.print("Checking server money");
-    const hack_thresh = hack_percent - hack_percent * 0.3;  // Lower aggressiveness of sync checks
+    const hack_thresh = (1 - hack_percent) * 0.5;  // Lower aggressiveness of sync checks
     if (ns.getServer(target).moneyAvailable < Math.floor(ns.getServer(target).moneyMax * hack_thresh)) {
         // Money lower than intended hack percent, re-prepare server.
         const currHost = ns.getServer().hostname;

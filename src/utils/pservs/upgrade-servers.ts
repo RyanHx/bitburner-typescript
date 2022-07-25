@@ -6,8 +6,8 @@ export async function main(ns: NS): Promise<void> {
     let split_target = "";
     let maxed_servers = 0;
     const utils = [];
-    for(const filename of ns.ls("home")){
-        if(filename.startsWith("/utils/")){
+    for (const filename of ns.ls("home")) {
+        if (filename.startsWith("/utils/")) {
             utils.push(filename);
         }
     }
@@ -30,7 +30,7 @@ export async function main(ns: NS): Promise<void> {
                         if (ram == target_ram) {
                             maxed_servers++;
                         }
-                        await ns.scp(utils, purchased_servs[i], "home");
+                        await ns.scp(utils, "home", purchased_servs[i]);
                         await reset_hacks(ns, split_target);
                     }
                 }
@@ -57,7 +57,7 @@ async function reset_hacks(ns: NS, split_target: string): Promise<void> {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function autocomplete(data: AutocompleteData, args: string[]): string[] {
     const values = [];
-    for(let ram = 8; ram <= 524288; ram *= 2){
+    for (let ram = 8; ram <= 524288; ram *= 2) {
         values.push(ram.toString());
     }
     return values
