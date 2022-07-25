@@ -37,7 +37,7 @@ export async function main(ns: NS): Promise<void> {
 
     while (true) {
         ns.print(`Offsetting batch ${rand_token}`);
-        while (performance.now() + durations.w - time_offset <= last_batch_end + 2000) {
+        while (performance.now() + durations.w - time_offset <= last_batch_end + 3000) {
             // next hack time <= last batch end + arbritrary offset
             // If we deployed a batch now the hack would fire before the previous batch finished			
             await ns.sleep(time_offset);
