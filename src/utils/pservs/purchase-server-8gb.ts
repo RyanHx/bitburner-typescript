@@ -6,7 +6,12 @@ export async function main(ns: NS): Promise<void> {
 
     const purchased_servers = ns.getPurchasedServers();
     const limit = ns.getPurchasedServerLimit();
-    const files = ["/utils/info.js", "/utils/killServer.js", "/utils/locate.js", "/utils/monitor.js", "/utils/root.js", "/utils/targets.js"]
+    const files = []
+    for(const file of ns.ls("home")) {
+        if(file.startsWith("/utils/")) {
+            files.push(file);
+        }
+    }
 
     // Continuously try to purchase servers until we've reached the maximum
     // amount of servers

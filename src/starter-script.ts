@@ -6,13 +6,13 @@ export async function main(ns: NS): Promise<void> {
         ['bt', 'n00dles'] // Batch target
     ]);
     // Start auto server purchase script
-    if (data.p) {
-        ns.exec("purchase-server-8gb.js", "home", 1);
+    if (data.p === true) {
+        ns.exec("/utils/pservs/purchase-server-8gb.js", "home", 1);
     }
 
     // Root all available servers
     const root_pid = ns.exec("/utils/root.js", "home", 1);
-    while (ns.isRunning(root_pid)) {
+    while (ns.isRunning(root_pid) === true) {
         await ns.sleep(50);
     }
 
