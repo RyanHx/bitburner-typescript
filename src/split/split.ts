@@ -1,127 +1,176 @@
 /** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
-    let target = "iron-gym";
-    if (ns.args[0]) {
-        target = <string>ns.args[0];
-    }
-    const hgw = [1, 30, 5]; // hack:grow:weaken ratio
     const data = ns.flags([
         ['H', false], /* ignore home? */
         ['B', false] /* ignore servers running batch.js? */
     ]);
-
     const root_servers = (<string>ns.read("nuked.txt")).split(",");
-    const files = ["/split/hack.js", "/split/grow.js", "/split/weaken.js"];
-    const maxServerThreads: Record<string, number> = {};
-    let totalThreads = 0;
+    const target = ns.args[0] ? <string>ns.args[0] : "iron-gym";
+    const ratios: Record<string, number> = {
+        hack: 1,
+        grow: 30,
+        weak: 5,
+        sum: 0
+    }
+    ratios.sum = ratios.hack + ratios.grow + ratios.weak;
 
-    for (let i = 0; i < root_servers.length; i++) {
-        if (data.B && isBatching(ns, root_servers[i])) {
+    const server_thread_counts = getTotalNetworkThreads(ns, root_servers, data.B);
+    const network_thread_pool = getThreadsFromRatio(ratios, <number>server_thread_counts.total);
+    for (const server of root_servers) {
+        if (data.B === true && isBatching(ns, server) === true) {
             continue;
         }
-        const maxram = ns.getServerMaxRam(root_servers[i]);
-        const server_threads = Math.floor(maxram / 1.75); // h/g/w scripts = 1.75gb ram usage each
-        maxServerThreads[root_servers[i]] = server_threads; // e.g. { "home" : 20 }
-        totalThreads += server_threads;
+        const server_hgw = getServerThreadsFromPool(ns, network_thread_pool, server_thread_counts.servs[server]);
+        await deploySplit(ns, server_hgw, server, target);
     }
 
-    const ratio_sum = hgw[0] + hgw[1] + hgw[2];
-    let total_hack_threads = Math.floor((hgw[0] / ratio_sum) * totalThreads);
-    let total_grow_threads = Math.floor((hgw[1] / ratio_sum) * totalThreads);
-    let total_weak_threads = Math.floor((hgw[2] / ratio_sum) * totalThreads);
-    for (let i = 0; i < root_servers.length; i++) {
-        if (data.B && isBatching(ns, root_servers[i])) {
+    if (data.H === true) {
+        return;
+    }
+    const home_ram_threshold = 1; // Change multiplier as needed
+    let home_free_ram = ns.getServerMaxRam('home');
+    for(const proc of ns.ps('home')){
+        if(proc.filename.startsWith('/split/')){
             continue;
         }
-        const current_hgw = [0, 0, 0];
-        while (maxServerThreads[root_servers[i]] > 0) {
-            if (total_hack_threads > 0) {
-                total_hack_threads--;
-                current_hgw[0]++;
-            }
-            else if (total_grow_threads > 0) {
-                total_grow_threads--;
-                current_hgw[1]++;
-            }
-            else if (total_weak_threads > 0) {
-                total_weak_threads--;
-                current_hgw[2]++;
-            }
-            maxServerThreads[root_servers[i]]--;
-        }
-        ns.killall(root_servers[i]);
-        for (let x = 0; x < 3; x++) {
-            // Refresh HGW files in case of changes (e.g. {stock} argument)
-            ns.rm(files[x], root_servers[i]);
-            await ns.scp(files[x], "home", root_servers[i]);
-            // Run file with computed threads
-            if (current_hgw[x] > 0) {
-                ns.exec(files[x], root_servers[i], current_hgw[x], target);
-            }
-        }
+        home_free_ram -= ns.getScriptRam(proc.filename, "home");
     }
-
-    // Fill leftover with grow.js
-    for (let i = root_servers.length - 1; i >= 0; i--) {
-        if (data.B && isBatching(ns, root_servers[i])) {
-            continue;
-        }
-        let free_ram = ns.getServerMaxRam(root_servers[i]) - ns.getServerUsedRam(root_servers[i]);
-        const grow_ram = ns.getScriptRam("/split/grow.js", root_servers[i])
-        if (free_ram < grow_ram) {
-            // If last server is filled correctly, no need to check rest of servers
-            break;
-        }
-        else {
-            ns.scriptKill("/split/grow.js", root_servers[i]);
-            free_ram = ns.getServerMaxRam(root_servers[i]) - ns.getServerUsedRam(root_servers[i]);
-            ns.exec("/split/grow.js", root_servers[i], Math.floor(free_ram / grow_ram), target);
-        }
-    }
-
-    if (data.H) { return; }
-    ns.scriptKill("/split/hack.js", "home");
-    ns.scriptKill("/split/grow.js", "home");
-    ns.scriptKill("/split/weaken.js", "home");
-    let home_free_ram = (ns.getServerMaxRam("home") - ns.getServerUsedRam("home")) + ns.getScriptRam("/split/split.js");
-    home_free_ram *= 0.5; // Change as needed
-    let max_home_threads = Math.floor(home_free_ram / 1.75);
-    let total_home_h = Math.floor((hgw[0] / ratio_sum) * max_home_threads);
-    let total_home_g = Math.floor((hgw[1] / ratio_sum) * max_home_threads);
-    let total_home_w = Math.floor((hgw[2] / ratio_sum) * max_home_threads);
-    const home_hgw = [0, 0, 0];
-    while (max_home_threads > 0) {
-        if (total_home_h > 0) {
-            total_home_h--;
-            home_hgw[0]++;
-        }
-        else if (total_home_g > 0) {
-            total_home_g--;
-            home_hgw[1]++;
-        }
-        else if (total_home_w > 0) {
-            total_home_w--;
-            home_hgw[2]++;
-        }
-        max_home_threads--;
-    }
-    for (let x = 0; x < 3; x++) {
-        if (home_hgw[x] > 0) {
-            if (x === 2) {
-                ns.spawn(files[x], home_hgw[x], target);
-            }
-            ns.exec(files[x], "home", home_hgw[x], target);
-        }
-    }
+    const total_home_threads = Math.floor((home_free_ram * home_ram_threshold) / 1.75);
+    const ratioed_home_threads = getThreadsFromRatio(ratios, total_home_threads);
+    await deploySplit(ns, ratioed_home_threads, "home", target, true);
 }
 
 export function autocomplete(data: AutocompleteData): string[] {
     return data.servers; // This script autocompletes the list of servers.
 }
 
-/** 
- * @param {NS} ns
- * @param {string} host
+/**
+ * Deploys H/G/W tasks on a host with given thread counts and target.
+ * @param ns Netscript interface.
+ * @param threads Object containing thread counts for each task.
+ * @param host Server on which to run tasks.
+ * @param target Server that tasks will target.
+ * @param spawn Should final .exec call instead be a .spawn (terminating the current script)
+ */
+async function deploySplit(ns: NS, threads: Record<string, number>, host: string, target: string, spawn = false): Promise<void> {
+    const files = {
+        hack: "/split/hack.js",
+        grow: "/split/grow.js",
+        weak: "/split/weaken.js"
+    }
+    if (host === "home") {
+        ns.scriptKill(files.hack, "home");
+        ns.scriptKill(files.grow, "home");
+        ns.scriptKill(files.weak, "home");
+    } else {
+        ns.killall(host);
+    }
+
+    if (threads.hack > 0) {
+        await ns.scp(files.hack, "home", host);
+        ns.exec(files.hack, host, threads.hack, target);
+    }
+    if (threads.grow > 0) {
+        await ns.scp(files.grow, "home", host);
+        ns.exec(files.grow, host, threads.grow, target);
+    }
+    if (threads.weak > 0) {
+        await ns.scp(files.weak, "home", host);
+        if (spawn === true) {
+            ns.spawn(files.weak, threads.weak, target);
+        }
+        ns.exec(files.weak, host, threads.weak, target);
+    }
+}
+
+/**
+ * Split total thread count into given ratio.
+ * @param ratios H:G:W ratio to split threads.
+ * @param total_threads Total number of threads to split into ratio.
+ * @returns Object containing thread counts as per provided ratio.
+ */
+function getThreadsFromRatio(ratios: Record<string, number>, total_threads: number): Record<string, number> {
+    const threads = {
+        hack: Math.floor((ratios.hack / ratios.sum) * total_threads),
+        grow: Math.floor((ratios.grow / ratios.sum) * total_threads),
+        weak: Math.floor((ratios.weak / ratios.sum) * total_threads),
+        total: 0
+    }
+    threads.total = threads.hack + threads.grow + threads.weak;
+    if (threads.total !== total_threads) {
+        const difference = total_threads - threads.total;
+        threads.grow += difference;
+        threads.total += difference;
+    }
+    return threads;
+}
+
+/**
+ * Get thread capacity of all nuked servers.
+ * @param ns Netscript interface.
+ * @param root_servers List of servers that have root access.
+ * @param ignore_batch_servs Avoid deploying on servers running batch.js?
+ * @returns Object containing thread capacity for each server, as well as total thread capacity across all servers.
+ */
+function getTotalNetworkThreads(ns: NS, root_servers: string[], ignore_batch_servs: boolean): Record<string, number | Record<string, number>> {
+    const network_threads = {
+        total: 0,
+        servs: {}
+    }
+
+    for (const server of root_servers) {
+        if (ignore_batch_servs === true && isBatching(ns, server) === true) {
+            continue;
+        }
+        const maxram = ns.getServerMaxRam(server);
+        const server_threads = Math.floor(maxram / 1.75); // h/g/w scripts = 1.75gb ram usage each
+        network_threads.servs[server] = server_threads; // e.g. { "home" : 20 }
+        network_threads.total += server_threads;
+    }
+    return network_threads;
+}
+
+/**
+ * Subtracts maximum possible thread counts from ratioed thread pool for a given thread capacity and returns them.
+ * @param {NS} ns Netscript interface.
+ * @param {object} thread_pool Pre-ratioed thread counts to subtract from.
+ * @param {number} total_server_threads Thread capacity of current server.
+ * @returns {object} Total threads for each task.
+ */
+function getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, total_server_threads: number): Record<string, number> {
+    const hgw_threads = {
+        hack: 0,
+        grow: 0,
+        weak: 0
+    }
+    while (total_server_threads > 0) {
+        let used_threads = 0;
+        if (thread_pool.hack > 0) {
+            used_threads = Math.min(total_server_threads, thread_pool.hack);
+            hgw_threads.hack = used_threads
+            thread_pool.hack -= used_threads;
+        }
+        else if (thread_pool.grow > 0) {
+            used_threads = Math.min(total_server_threads, thread_pool.grow);
+            hgw_threads.grow = used_threads
+            thread_pool.grow -= used_threads;
+        }
+        else if (thread_pool.weak > 0) {
+            used_threads = Math.min(total_server_threads, thread_pool.weak);
+            hgw_threads.weak = used_threads
+            thread_pool.weak -= used_threads;
+        }
+        thread_pool.total -= used_threads;
+        total_server_threads -= used_threads;
+    }
+    return hgw_threads;
+}
+
+/**
+ * Checks whether given server is running batch.js.
+ * @param ns Netscript interface.
+ * @param host Hostname of server to check running scripts.
+ * @returns Is host running batch.js.
  */
 function isBatching(ns: NS, host: string): boolean {
     const proc_list = ns.ps(host);
