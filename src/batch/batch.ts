@@ -11,8 +11,10 @@ export async function main(ns: NS): Promise<void> {
         max: 0.95,
         min: 0.05
     }
+    if (ns.getHostname() === "home") {
+        ns.run("/utils/monitor.js", 1, target);
+    }
 
-    ns.run("/utils/monitor.js", 1, target);
     const prep = ns.run("/batch/prep2.js", 1, target);
     while (ns.isRunning(prep) === true) {
         await ns.sleep(1000);
@@ -33,9 +35,9 @@ export async function main(ns: NS): Promise<void> {
     }
     let last_batch_end = performance.now();
     let rand_token = 0;
-
     let currLevel = ns.getHackingLevel();
-    let currRam = ns.getServer().maxRam;
+    const currHost = ns.getHostname();
+    let currRam = ns.getServerMaxRam(currHost);
     let calibration_flag = true;
 
     while (true) {
@@ -43,30 +45,25 @@ export async function main(ns: NS): Promise<void> {
 
         // Recalibrate timings/threads
         if (ns.getHackingLevel() != currLevel || calibration_flag === true) {
-            ns.print("Waiting for safe calibration");
-            if (ns.getServer(target).moneyAvailable < ns.getServer(target).moneyMax) {
+            if (ns.getServerMoneyAvailable(target) < ns.getServerMaxMoney(target)) {
                 // Server money currently not maxed (between hack and grow of a batch)
+                ns.print("Waiting for safe calibration");
                 await ns.sleep(durations.offset * 3 + durations.offset / 2); // end of batch + half offset
             }
             calculateDurations(ns, target, durations);
-            threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServer(target).moneyMax * hack_data.current));
+            threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServerMaxMoney(target) * hack_data.current));
             threads.h = threads.h < 1 ? 1 : threads.h;
             threads.w1 = Math.ceil(threads.h / 25);
             const growth_multi = hack_data.current == 1 ? 2 : 1 / (1 - hack_data.current);
-            threads.g = Math.ceil(ns.growthAnalyze(target, growth_multi, ns.getServer().cpuCores));
+            threads.g = Math.ceil(ns.growthAnalyze(target, growth_multi/*, ns.getServer().cpuCores*/));
             threads.w2 = Math.ceil(threads.g / 12.5);
             currLevel = ns.getHackingLevel();
             calibration_flag = false;
         }
-        ns.print(`Offsetting batch ${rand_token}`);
-        while (performance.now() + durations.w - durations.offset <= last_batch_end + 3000) {
-            // next hack time <= last batch end + arbritrary offset
-            // If we deployed a batch now the hack would fire before the previous batch finished			
-            await ns.sleep(durations.offset);
-        }
-        if (ns.getServer().maxRam > currRam) {
+        
+        if (ns.getServerMaxRam(currHost) > currRam) {
             hack_data.max = 0.95; // Reset maximum
-            currRam = ns.getServer().maxRam;
+            currRam = ns.getServerMaxRam(currHost);
         }
 
         if (await requiredRamTimeout(ns, threads, durations) === true) {
@@ -83,7 +80,14 @@ export async function main(ns: NS): Promise<void> {
             continue;
         }
 
+        ns.print(`Offsetting batch ${rand_token}`);
+        while (performance.now() + durations.w - durations.offset <= last_batch_end + 3000) {
+            // next hack time <= last batch end + arbritrary offset
+            // If we deployed a batch now the hack would fire before the previous batch finished			
+            await ns.sleep(durations.offset);
+        }
         ns.print(`Deploying ${hack_data.current * 100}% hack`);
+        ns.print("--------------------");
         deploy(ns, target, threads, durations, rand_token++);
         last_batch_end = performance.now() + durations.total;
         if (data.s === true) {
@@ -135,12 +139,12 @@ function hackDataChanged(ns: NS, threads: Record<string, number>, hack_data: Rec
  * @param {string} target
  * @param {number} hack_percent
  */
-async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): Promise<void> {
-    ns.print("Checking server money");
+async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): Promise<void> {    
     const hack_thresh = (1 - hack_percent) * 0.5;  // Lower aggressiveness of sync checks
-    if (ns.getServer(target).moneyAvailable < Math.floor(ns.getServer(target).moneyMax * hack_thresh)) {
+    if (ns.getServerMoneyAvailable(target) < Math.floor(ns.getServerMaxMoney(target) * hack_thresh)) {
         // Money lower than intended hack percent, re-prepare server.
-        const currHost = ns.getServer().hostname;
+        ns.print("Server money out of sync, reprepping");
+        const currHost = ns.getHostname();
         ns.scriptKill("/batch/prep2.js", currHost);
         ns.scriptKill("/batch/batch_w.js", currHost);
         ns.scriptKill("/batch/batch_g.js", currHost);
@@ -188,12 +192,13 @@ function getTotalBatchRam(threads: Record<string, number>): number {
  */
 async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durations: Record<string, number>): Promise<boolean> {
     const req_ram = getTotalBatchRam(threads);
+    const currHost = ns.getHostname();
     let first_ram_alarm;
-    let free_ram = ns.getServer().maxRam - ns.getServer().ramUsed;
-    const ram_timeout = durations.total + 10000;
-    ns.print(`Waiting for ${req_ram}GB RAM (${Math.round(ram_timeout / 10) / 100}s)`);
+    let free_ram = ns.getServerMaxRam(currHost) - ns.getServerUsedRam(currHost);
+    const ram_timeout = durations.total + 10000;    
     while (free_ram < req_ram) {
         if (!first_ram_alarm) {
+            ns.print(`Waiting for ${req_ram}GB RAM (${Math.round(ram_timeout / 10) / 100}s)`);
             first_ram_alarm = performance.now();
         } else if (performance.now() - first_ram_alarm > ram_timeout) {
             // Still not enough ram after timeout
@@ -202,7 +207,7 @@ async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durat
         }
         //ns.print(`Not enough ram (${free_ram} / ${req_ram})`);
         await ns.sleep(200);
-        free_ram = ns.getServer().maxRam - ns.getServer().ramUsed;
+        free_ram = ns.getServerMaxRam(currHost) - ns.getServerUsedRam(currHost);
     }
     return false;
 }
@@ -213,7 +218,7 @@ async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durat
  * @returns {number} Free RAM (GB)
  */
 function getFreeRam(ns: NS): number {
-    const host = ns.getServer().hostname;
+    const host = ns.getHostname();
     const batch_files = ["/batch/batch_g.js", "/batch/batch_h.js", "/batch/batch_w.js"];
     let used_ram = 0;
     for (const process of ns.ps(host)) {
@@ -221,5 +226,5 @@ function getFreeRam(ns: NS): number {
             used_ram += ns.getScriptRam(process.filename, host);
         }
     }
-    return ns.getServer().maxRam - used_ram;
+    return ns.getServerMaxRam(host) - used_ram;
 }
