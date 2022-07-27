@@ -2,57 +2,53 @@
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");
 
-    let target = "iron-gym";
-    if (ns.args[0]) {
-        target = <string>ns.args[0];
-    }
-    if (ns.getServer().hostname === "home") {
-        ns.run("/utils/monitor.js", 1, target);
-    }
-
     const data = ns.flags([
         ['s', false] // sequential batches
     ]);
+    const target = data._[0] ? <string>data._[0] : "iron-gym";
+    const hack_data = {
+        current: data._[1] ? <number>data._[1] : 0.1,
+        max: 0.95,
+        min: 0.05
+    }
 
+    ns.run("/utils/monitor.js", 1, target);
     const prep = ns.run("/batch/prep2.js", 1, target);
     while (ns.isRunning(prep) === true) {
         await ns.sleep(1000);
     }
 
-    const time_offset = 150;
-    const hack_data = { current: Number(ns.args[1]) || 0.1, max: 1 }
-    let currLevel = ns.getHackingLevel();
-    let currRam = ns.getServer().maxRam;
-
-    const threads = { h: 0, w1: 0, g: 0, w2: 0 };
-    threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServer(target).moneyMax * hack_data.current));
-    threads.w1 = Math.ceil(threads.h / 25);
-    threads.g = Math.ceil(ns.growthAnalyze(target, 1 / (1 - hack_data.current), ns.getServer().cpuCores));
-    threads.w2 = Math.ceil(threads.g / 12.5);
-
-    let durations = calculateDuration(ns, target, time_offset);
-    let last_batch_end = performance.now() - durations.total;
-    let calibration_flag = false;
+    const threads = {
+        h: 0,
+        w1: 0,
+        g: 0,
+        w2: 0
+    };
+    const durations = {
+        h: 0,
+        w: 0,
+        g: 0,
+        total: 0,
+        offset: 150
+    }
+    let last_batch_end = performance.now();
     let rand_token = 0;
 
-    while (true) {
-        ns.print(`Offsetting batch ${rand_token}`);
-        while (performance.now() + durations.w - time_offset <= last_batch_end + 3000) {
-            // next hack time <= last batch end + arbritrary offset
-            // If we deployed a batch now the hack would fire before the previous batch finished			
-            await ns.sleep(time_offset);
-        }
+    let currLevel = ns.getHackingLevel();
+    let currRam = ns.getServer().maxRam;
+    let calibration_flag = true;
 
+    while (true) {
         await checkMoneyInSync(ns, target, hack_data.current);
 
         // Recalibrate timings/threads
-        if (ns.getHackingLevel() != currLevel || calibration_flag) {
+        if (ns.getHackingLevel() != currLevel || calibration_flag === true) {
             ns.print("Waiting for safe calibration");
             if (ns.getServer(target).moneyAvailable < ns.getServer(target).moneyMax) {
                 // Server money currently not maxed (between hack and grow of a batch)
-                await ns.sleep(time_offset * 3 + time_offset / 2); // end of batch + half offset
+                await ns.sleep(durations.offset * 3 + durations.offset / 2); // end of batch + half offset
             }
-            durations = calculateDuration(ns, target, time_offset);
+            calculateDurations(ns, target, durations);
             threads.h = Math.floor(ns.hackAnalyzeThreads(target, ns.getServer(target).moneyMax * hack_data.current));
             threads.h = threads.h < 1 ? 1 : threads.h;
             threads.w1 = Math.ceil(threads.h / 25);
@@ -62,15 +58,21 @@ export async function main(ns: NS): Promise<void> {
             currLevel = ns.getHackingLevel();
             calibration_flag = false;
         }
+        ns.print(`Offsetting batch ${rand_token}`);
+        while (performance.now() + durations.w - durations.offset <= last_batch_end + 3000) {
+            // next hack time <= last batch end + arbritrary offset
+            // If we deployed a batch now the hack would fire before the previous batch finished			
+            await ns.sleep(durations.offset);
+        }
         if (ns.getServer().maxRam > currRam) {
-            hack_data.max = 1; // Reset maximum
+            hack_data.max = 0.95; // Reset maximum
             currRam = ns.getServer().maxRam;
         }
 
         if (await requiredRamTimeout(ns, threads, durations) === true) {
             ns.print("Timed out waiting for free RAM");
-            if (hack_data.current >= 0.15) {
-                hack_data.current = Math.round((hack_data.current - 0.05) * 100) / 100; // Plain subtraction was adding huge decimal places
+            if (hack_data.current > hack_data.min) {
+                hack_data.current = Math.round((hack_data.current - 0.01) * 100) / 100; // Plain subtraction was adding huge decimal places
                 ns.print(`Decremented hack to ${hack_data.current * 100}%`);
             }
             continue;
@@ -82,7 +84,7 @@ export async function main(ns: NS): Promise<void> {
         }
 
         ns.print(`Deploying ${hack_data.current * 100}% hack`);
-        deploy(ns, threads, target, durations, time_offset, rand_token++);
+        deploy(ns, target, threads, durations, rand_token++);
         last_batch_end = performance.now() + durations.total;
         if (data.s === true) {
             await ns.sleep(durations.total + 500);
@@ -100,29 +102,26 @@ export function autocomplete(data: AutocompleteData): string[] {
  * @param {object} threads
  * @param {string} target
  * @param {object} durations
- * @param {number} time_offset
  * @param {number} rand_token
  */
-function deploy(ns: NS, threads: Record<string, number>, target: string, durations: Record<string, number>, time_offset: number, rand_token: number): void {
+function deploy(ns: NS, target: string, threads: Record<string, number>, durations: Record<string, number>, rand_token: number): void {
     const h_threads = threads.h - Math.ceil(threads.h * 0.03); // Avoid blowing past hack target
     //ns.print(`Durations: ${JSON.stringify(durations)}`);
-    ns.run("/batch/batch_h.js", h_threads || 1, target, durations.w - durations.h - time_offset, rand_token);
+    ns.run("/batch/batch_h.js", h_threads || 1, target, durations.w - durations.h - durations.offset, rand_token);
     ns.run("/batch/batch_w.js", threads.w1 || 1, target, 0, rand_token);
-    ns.run("/batch/batch_g.js", threads.g || 1, target, durations.w - durations.g + time_offset, rand_token);
-    ns.run("/batch/batch_w.js", threads.w2 || 1, target, time_offset * 2, rand_token);
+    ns.run("/batch/batch_g.js", threads.g || 1, target, durations.w - durations.g + durations.offset, rand_token);
+    ns.run("/batch/batch_w.js", threads.w2 || 1, target, durations.offset * 2, rand_token);
 }
 
 function hackDataChanged(ns: NS, threads: Record<string, number>, hack_data: Record<string, number>): boolean {
     if (getTotalBatchRam(threads) < getFreeRam(ns) * 0.2) {
         const next_increment = Math.round((hack_data.current + 0.01) * 100) / 100; // Plain addition was adding huge decimal places
-        let canIncrement = hack_data.current <= 0.89;
-        canIncrement = canIncrement && next_increment <= hack_data.max;
-        if (canIncrement === true) {
+        if (next_increment <= hack_data.max) {
             hack_data.current = next_increment;
             ns.print(`Incremented hack to ${hack_data.current * 100}%`);
             return true;
         }
-    } else if (hack_data.current >= 0.11) {
+    } else if (hack_data.current > hack_data.min) {
         hack_data.current = Math.round((hack_data.current - 0.01) * 100) / 100; // Plain subtraction was adding huge decimal places
         hack_data.max = hack_data.current;
         ns.print(`Decremented hack to ${hack_data.current * 100}%`);
@@ -157,15 +156,13 @@ async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): P
  * Calculates duration of batch and its respective tasks.
  * @param {NS} ns
  * @param {string} target Target's hostname.
- * @param {number} time_offset Time in ms between tasks.
- * @returns {object} Object containing task durations and total duration.
+ * @param {object} durations Object containing durations of each task and task offset.
  */
-function calculateDuration(ns: NS, target: string, time_offset: number): Record<string, number> {
-    const h_time = Math.ceil(ns.getHackTime(target));
-    const w_time = h_time * 4;
-    const g_time = Math.ceil(h_time * 3.2);
-    const t_time = Math.ceil(w_time + time_offset * 2);
-    return { h: h_time, w: w_time, g: g_time, total: t_time };
+function calculateDurations(ns: NS, target: string, durations: Record<string, number>) {
+    durations.h = Math.ceil(ns.getHackTime(target));
+    durations.w = durations.h * 4;
+    durations.g = Math.ceil(durations.h * 3.2);
+    durations.total = Math.ceil(durations.w + durations.offset * 2);
 }
 
 /**
@@ -194,7 +191,7 @@ async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durat
     let first_ram_alarm;
     let free_ram = ns.getServer().maxRam - ns.getServer().ramUsed;
     const ram_timeout = durations.total + 10000;
-    ns.print(`Checking RAM up to ${Math.round(ram_timeout / 10) / 100} seconds`);
+    ns.print(`Waiting for ${req_ram}GB RAM (${Math.round(ram_timeout / 10) / 100}s)`);
     while (free_ram < req_ram) {
         if (!first_ram_alarm) {
             first_ram_alarm = performance.now();
