@@ -5,8 +5,7 @@ export async function main(ns: NS): Promise<void> {
         ['refreshrate', 200],
         ['help', false],
     ])
-    const args = <string[]><unknown>flags._;
-    if (args.length === 0 || flags.help) {
+    if (flags._.length === 0 || flags.help) {
         ns.tprint("This script helps visualize the money and security of a server.");
         ns.tprint(`USAGE: run ${ns.getScriptName()} SERVER_NAME`);
         ns.tprint("Example:");
@@ -15,8 +14,9 @@ export async function main(ns: NS): Promise<void> {
     }
     ns.tail();
     ns.disableLog('ALL');
+    const server = flags._[0];
     while (true) {
-        const server = <string>args[0];
+
         let money = ns.getServerMoneyAvailable(server);
         if (money === 0) money = 1;
         const maxMoney = ns.getServerMaxMoney(server);

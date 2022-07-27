@@ -5,7 +5,7 @@ export async function main(ns: NS): Promise<void> {
         ['B', false] /* ignore servers running batch.js? */
     ]);
     const root_servers = (<string>ns.read("nuked.txt")).split(",");
-    const target = ns.args[0] ? <string>ns.args[0] : "iron-gym";
+    const target = data._[0] ? <string>data._[0] : "iron-gym";
     const ratios: Record<string, number> = {
         hack: 1,
         grow: 30,
@@ -29,8 +29,8 @@ export async function main(ns: NS): Promise<void> {
     }
     const home_ram_threshold = 1; // Change multiplier as needed
     let home_free_ram = ns.getServerMaxRam('home');
-    for(const proc of ns.ps('home')){
-        if(proc.filename.startsWith('/split/')){
+    for (const proc of ns.ps('home')) {
+        if (proc.filename.startsWith('/split/')) {
             continue;
         }
         home_free_ram -= ns.getScriptRam(proc.filename, "home");
@@ -89,7 +89,7 @@ async function deploySplit(ns: NS, threads: Record<string, number>, host: string
  * @param total_threads Total number of threads to split into ratio.
  * @returns Object containing thread counts as per provided ratio.
  */
-function getThreadsFromRatio(ratios: Record<string, number>, total_threads: number): Record<string, number> {
+function getThreadsFromRatio(ratios: Record<string, number>, total_threads: number) {
     const threads = {
         hack: Math.floor((ratios.hack / ratios.sum) * total_threads),
         grow: Math.floor((ratios.grow / ratios.sum) * total_threads),
@@ -112,10 +112,10 @@ function getThreadsFromRatio(ratios: Record<string, number>, total_threads: numb
  * @param ignore_batch_servs Avoid deploying on servers running batch.js?
  * @returns Object containing thread capacity for each server, as well as total thread capacity across all servers.
  */
-function getTotalNetworkThreads(ns: NS, root_servers: string[], ignore_batch_servs: boolean): Record<string, number | Record<string, number>> {
+function getTotalNetworkThreads(ns: NS, root_servers: string[], ignore_batch_servs: boolean) {
     const network_threads = {
         total: 0,
-        servs: {}
+        servs: {} as Record<string, number>
     }
 
     for (const server of root_servers) {
@@ -137,7 +137,7 @@ function getTotalNetworkThreads(ns: NS, root_servers: string[], ignore_batch_ser
  * @param {number} total_server_threads Thread capacity of current server.
  * @returns {object} Total threads for each task.
  */
-function getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, total_server_threads: number): Record<string, number> {
+function getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, total_server_threads: number) {
     const hgw_threads = {
         hack: 0,
         grow: 0,
@@ -172,7 +172,7 @@ function getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, t
  * @param host Hostname of server to check running scripts.
  * @returns Is host running batch.js.
  */
-function isBatching(ns: NS, host: string): boolean {
+function isBatching(ns: NS, host: string) {
     const proc_list = ns.ps(host);
     if (!proc_list || proc_list.length === 0) return false;
     for (const proc of proc_list) {

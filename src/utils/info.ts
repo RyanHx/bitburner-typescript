@@ -1,6 +1,6 @@
 export async function main(ns: NS): Promise<void> {
     const args = ns.flags([["help", false]]);
-    const server = <string>ns.args[0];
+    const server = <string>args._[0];
     if (args.help || !server) {
         ns.tprint("This script does a more detailed analysis of a server.");
         ns.tprint(`Usage: run ${ns.getScriptName()} SERVER`);
