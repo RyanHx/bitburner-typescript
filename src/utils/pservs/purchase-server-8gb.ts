@@ -1,3 +1,5 @@
+import { copyUtils } from "/utils/copy-utils";
+
 /** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
     // How much RAM each purchased server will have. In this case, it'll
@@ -6,12 +8,6 @@ export async function main(ns: NS): Promise<void> {
 
     const purchased_servers = ns.getPurchasedServers();
     const limit = ns.getPurchasedServerLimit();
-    const files = []
-    for(const file of ns.ls("home")) {
-        if(file.startsWith("/utils/")) {
-            files.push(file);
-        }
-    }
 
     // Continuously try to purchase servers until we've reached the maximum
     // amount of servers
@@ -22,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
             //  1. Purchase the server
             //  2. Increment our iterator to indicate that we've bought a new server
             const hostname = ns.purchaseServer("pserv-" + purchased_servers.length, ram);
-            await ns.scp(files, hostname, "home");
+            await copyUtils(ns, hostname);
             purchased_servers.push(hostname);
         }
         else {

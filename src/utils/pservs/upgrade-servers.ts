@@ -1,3 +1,5 @@
+import { copyUtils } from "/utils/copy-utils";
+
 /** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("sleep");
@@ -5,38 +7,36 @@ export async function main(ns: NS): Promise<void> {
     const purchased_servs = ns.getPurchasedServers();
     let split_target = "";
     let maxed_servers = 0;
-    const utils = [];
-    for (const filename of ns.ls("home")) {
-        if (filename.startsWith("/utils/")) {
-            utils.push(filename);
-        }
-    }
+    
     while (maxed_servers < purchased_servs.length) { // Loop till all servers maxed
-        for (let i = 0; i < purchased_servs.length; i++) { // Foreach purchased server
-            for (let ram = target_ram; ram > ns.getServerMaxRam(purchased_servs[i]); ram = ram / 2) { // Count back from largest ram
+        for (const pserv of purchased_servs) {
+            for (let ram = target_ram; ram > ns.getServerMaxRam(pserv); ram = ram / 2) { // Count back from largest ram
                 if (ns.getServerMoneyAvailable('home') * 0.2 > ns.getPurchasedServerCost(ram)) {
-                    for (const script of ns.ps(purchased_servs[i])) {
-                        if (script.filename.startsWith("/split/")) {
-                            split_target = <string>script.args[0];
-                            break;
-                        }
-                    }
-                    ns.killall(purchased_servs[i]);
-                    while (ns.ps(purchased_servs[i]).length > 0) {
+                    split_target = getSplitTarget(ns, pserv);
+                    ns.killall(pserv);
+                    while (ns.ps(pserv).length > 0) {
                         await ns.sleep(2000);
                     }
-                    if (ns.deleteServer(purchased_servs[i]) === true) {
-                        ns.purchaseServer(purchased_servs[i], ram);
+                    if (ns.deleteServer(pserv) === true) {
+                        ns.purchaseServer(pserv, ram);
                         if (ram == target_ram) {
                             maxed_servers++;
                         }
-                        await ns.scp(utils, "home", purchased_servs[i]);
+                        await copyUtils(ns, pserv);
                         await reset_hacks(ns, split_target);
                     }
                 }
             }
         }
         await ns.sleep(1);
+    }
+}
+
+function getSplitTarget(ns: NS, hostname: string): string {
+    for (const script of ns.ps(hostname)) {
+        if (script.filename.startsWith("/split/")) {
+            return script.args[0];
+        }
     }
 }
 
@@ -48,7 +48,7 @@ async function reset_hacks(ns: NS, split_target: string): Promise<void> {
     while (ns.isRunning(rehack) === true) {
         await ns.sleep(1000);
     }
-    rehack = ns.run("/split/split.js", 1, split_target, "-H");
+    rehack = ns.run("/split/split.js", 1, split_target, "-H", "-B");
     while (ns.isRunning(rehack) === true) {
         await ns.sleep(500);
     }
