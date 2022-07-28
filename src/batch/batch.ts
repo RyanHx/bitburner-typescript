@@ -60,7 +60,7 @@ export async function main(ns: NS): Promise<void> {
             currLevel = ns.getHackingLevel();
             calibration_flag = false;
         }
-        
+
         if (ns.getServerMaxRam(currHost) > currRam) {
             hack_data.max = 0.95; // Reset maximum
             currRam = ns.getServerMaxRam(currHost);
@@ -68,14 +68,11 @@ export async function main(ns: NS): Promise<void> {
 
         if (await requiredRamTimeout(ns, threads, durations) === true) {
             ns.print("Timed out waiting for free RAM");
-            if (hack_data.current > hack_data.min) {
-                hack_data.current = Math.round((hack_data.current - 0.01) * 100) / 100; // Plain subtraction was adding huge decimal places
-                ns.print(`Decremented hack to ${hack_data.current * 100}%`);
-            }
+            adjustHackPercent(ns, hack_data, -0.01);
             continue;
         }
 
-        if (hackDataChanged(ns, threads, hack_data) === true) {
+        if (hackNeededChange(ns, threads, hack_data) === true) {
             calibration_flag = true;
             continue;
         }
@@ -117,21 +114,27 @@ function deploy(ns: NS, target: string, threads: Record<string, number>, duratio
     ns.run("/batch/batch_w.js", threads.w2 || 1, target, durations.offset * 2, rand_token);
 }
 
-function hackDataChanged(ns: NS, threads: Record<string, number>, hack_data: Record<string, number>): boolean {
-    if (getTotalBatchRam(threads) < getFreeRam(ns) * 0.2) {
-        const next_increment = Math.round((hack_data.current + 0.01) * 100) / 100; // Plain addition was adding huge decimal places
-        if (next_increment <= hack_data.max) {
-            hack_data.current = next_increment;
-            ns.print(`Incremented hack to ${hack_data.current * 100}%`);
-            return true;
-        }
-    } else if (hack_data.current > hack_data.min) {
-        hack_data.current = Math.round((hack_data.current - 0.01) * 100) / 100; // Plain subtraction was adding huge decimal places
-        hack_data.max = hack_data.current;
-        ns.print(`Decremented hack to ${hack_data.current * 100}%`);
+function adjustHackPercent(ns: NS, hack_data: Record<string, number>, adjustment: number) {
+    const start = hack_data.current;
+    const requested_change = Math.round((hack_data.current + adjustment) * 100) / 100;
+    if (hack_data.min <= requested_change && requested_change <= hack_data.max) {
+        hack_data.current = requested_change
+        const prefix = requested_change > start ? "Inc" : "Dec"
+        ns.print(`${prefix}remented hack to ${hack_data.current * 100}%`);
         return true;
     }
     return false;
+}
+
+function hackNeededChange(ns: NS, threads: Record<string, number>, hack_data: Record<string, number>): boolean {
+    let changed = false;
+    if (getTotalBatchRam(threads) < getFreeRam(ns) * 0.2) {
+        changed = adjustHackPercent(ns, hack_data, 0.01);
+    } else {
+        changed = adjustHackPercent(ns, hack_data, -0.01);
+        hack_data.max = hack_data.current;
+    }
+    return changed;
 }
 
 /**
@@ -139,7 +142,7 @@ function hackDataChanged(ns: NS, threads: Record<string, number>, hack_data: Rec
  * @param {string} target
  * @param {number} hack_percent
  */
-async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): Promise<void> {    
+async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): Promise<void> {
     const hack_thresh = (1 - hack_percent) * 0.5;  // Lower aggressiveness of sync checks
     if (ns.getServerMoneyAvailable(target) < Math.floor(ns.getServerMaxMoney(target) * hack_thresh)) {
         // Money lower than intended hack percent, re-prepare server.
@@ -195,7 +198,7 @@ async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durat
     const currHost = ns.getHostname();
     let first_ram_alarm;
     let free_ram = ns.getServerMaxRam(currHost) - ns.getServerUsedRam(currHost);
-    const ram_timeout = durations.total + 10000;    
+    const ram_timeout = durations.total + 10000;
     while (free_ram < req_ram) {
         if (!first_ram_alarm) {
             ns.print(`Waiting for ${req_ram}GB RAM (${Math.round(ram_timeout / 10) / 100}s)`);
