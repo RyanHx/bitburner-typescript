@@ -41,6 +41,6 @@ export async function main(ns: NS): Promise<void> {
             rooted.push(pserv);
         }
     });
-    rooted = rooted.filter(item => !["home"].includes(item));
+    rooted = rooted.filter(hostname => !["home"].includes(hostname));
     await ns.write("nuked.txt", rooted, "w");
 }

@@ -10,7 +10,7 @@ export async function main(ns: NS): Promise<void> {
     
     while (maxed_servers < purchased_servs.length) { // Loop till all servers maxed
         for (const pserv of purchased_servs) {
-            for (let ram = target_ram; ram > ns.getServerMaxRam(pserv); ram = ram / 2) { // Count back from largest ram
+            for (let ram = target_ram; ram > ns.getServerMaxRam(pserv); ram /= 2) { // Count back from largest ram
                 if (ns.getServerMoneyAvailable('home') * 0.2 > ns.getPurchasedServerCost(ram)) {
                     split_target = getSplitTarget(ns, pserv);
                     ns.killall(pserv);

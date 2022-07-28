@@ -6,7 +6,7 @@ export async function main(ns: NS): Promise<void> {
     ns.tail();
     const data = ns.flags([
         ['st', 'foodnstuff'], // Split hack target
-        ['wt', 60] // Weaken time
+        ['wt', 30] // Weaken time
     ]);
 
     const root = ns.run("/utils/root.js");
@@ -43,18 +43,14 @@ export async function main(ns: NS): Promise<void> {
             const target = <string>targets.shift();
             ns.print(`Target: ${target}`);
             ns.killall(pserv.hostname, true);
-            req_files.forEach(filename => {
-                if (ns.fileExists(filename, pserv.hostname) === true) {
-                    ns.rm(filename, pserv.hostname);
-                }
-            });
             await ns.scp(req_files, "home", pserv.hostname);
             ns.print("Deploying batch");
             ns.exec("/batch/batch.js", pserv.hostname, 1, target, 0.5);
         }
     }
+    const split_target = targets.length > 0 ? targets.shift() : data.st;
     ns.print("Running split");
-    ns.run("/split/split.js", 1, data.st, "-H", "-B");
+    ns.run("/split/split.js", 1, split_target, "-H", "-B");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
