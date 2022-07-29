@@ -19,7 +19,13 @@ const permutations = [
     [1, 0, 0, 0],
 ];
 
-export function calcMaterials(industry: string, inventory: number): number[] | null {
+export function calcMaterials(industry: string, inventory: number): {
+    Hardware: number;
+    Robots: number;
+    "AI Cores": number;
+    "Real Estate": number;
+    multiplier: number;
+} | null {
     let pows;
     switch (industry.toLowerCase()) {
         case "energy": { pows = [0.00, 0.05, 0.30, 0.65]; } break;
