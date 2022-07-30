@@ -1,16 +1,18 @@
 import { NS } from '@ns'
 import { Manager } from '/corp/manager'
+import { OfficeManager } from '/corp/OfficeManager';
 import { WarehouseManager } from '/corp/WarehouseManager';
 
 export async function main(ns: NS): Promise<void> {
     const managers: Manager[] = [];
     for (const division of ns.corporation.getCorporation().divisions) {
+        managers.push(new OfficeManager(ns, division.name));
         managers.push(new WarehouseManager(ns, division.name));
     }
     while (true) {
         if (ns.corporation.getCorporation().state === 'EXPORT') {
             for (const manager of managers) {
-                manager.process(ns);
+                await manager.process(ns);
             }
             while (ns.corporation.getCorporation().state === 'EXPORT') {
                 await ns.sleep(1);

@@ -33,24 +33,12 @@ export class WarehouseManager implements Manager {
     }
 
     process(ns: NS): void {
-        this.tryExpand(ns);
         this.tryBuyWarehouses(ns);
         this.tryUpgradeWarehouses(ns);
         this.tryCreateProduct(ns);
         this.tryPriceProducts(ns);
         this.tryPriceMaterials(ns);
         this.tryBuyBoostMats(ns);
-    }
-
-    private tryExpand(ns: NS) {
-        const division = ns.corporation.getDivision(this.division);
-        if (division.cities.length === 6) return;
-        for (const city of this.all_cities) {
-            try { ns.corporation.expandCity(division.name, city); }
-            catch (e) {
-                //ns.print(e)
-            }
-        }
     }
 
     private tryBuyWarehouses(ns: NS) {
@@ -67,11 +55,10 @@ export class WarehouseManager implements Manager {
 
     private tryUpgradeWarehouses(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
-        const div_profit = division.lastCycleRevenue - division.lastCycleExpenses;
         for (const city of division.cities) {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
             const upgrade_cost = ns.corporation.getUpgradeWarehouseCost(division.name, city);
-            if (div_profit * 0.1 > upgrade_cost) {
+            if (ns.corporation.getCorporation().funds * 0.001 > upgrade_cost) {
                 ns.corporation.upgradeWarehouse(division.name, city);
             }
         }
@@ -79,7 +66,6 @@ export class WarehouseManager implements Manager {
 
     private tryBuyBoostMats(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
-        const div_profit = division.lastCycleRevenue - division.lastCycleExpenses;
         const names = ["Hardware", "Robots", "AI Cores", "Real Estate"];
         for (const city of division.cities) {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
@@ -89,7 +75,7 @@ export class WarehouseManager implements Manager {
             for (const material of names) {
                 const city_mat_stock = ns.corporation.getMaterial(division.name, city, material);
                 const req_amount = mat_counts[material] - city_mat_stock.qty
-                if (req_amount > 0 && div_profit * 0.1 > city_mat_stock.cost * req_amount && city_mat_stock.prod < 1) {
+                if (req_amount > 0 && ns.corporation.getCorporation().funds * 0.001 > city_mat_stock.cost * req_amount && city_mat_stock.prod < 1) {
                     ns.corporation.buyMaterial(division.name, city, material, req_amount / 10);
                 } else {
                     ns.corporation.buyMaterial(division.name, city, material, 0);
