@@ -166,9 +166,13 @@ async function checkMoneyInSync(ns: NS, target: string, hack_percent: number): P
  * @param {object} durations Object containing durations of each task and task offset.
  */
 function calculateDurations(ns: NS, target: string, durations: Record<string, number>) {
-    durations.h = Math.ceil(ns.getHackTime(target));
-    durations.w = durations.h * 4;
-    durations.g = Math.ceil(durations.h * 3.2);
+    const target_server = ns.getServer(target);
+    const player = ns.getPlayer();
+    target_server.hackDifficulty = target_server.minDifficulty;
+    target_server.moneyAvailable = target_server.moneyMax;
+    durations.h = ns.formulas.hacking.hackTime(target_server, player);
+    durations.w = ns.formulas.hacking.weakenTime(target_server, player);
+    durations.g = ns.formulas.hacking.growTime(target_server, player);
     durations.total = Math.ceil(durations.w + durations.offset * 2);
 }
 
@@ -204,8 +208,7 @@ async function requiredRamTimeout(ns: NS, threads: Record<string, number>, durat
             ns.print(`Waiting for ${req_ram}GB RAM (${Math.round(ram_timeout / 10) / 100}s)`);
             first_ram_alarm = performance.now();
         } else if (performance.now() - first_ram_alarm > ram_timeout) {
-            // Still not enough ram after timeout
-            ns.print("No free ram after previous batch!");
+            // Still not enough ram after timeout            
             return true;
         }
         //ns.print(`Not enough ram (${free_ram} / ${req_ram})`);

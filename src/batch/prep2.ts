@@ -71,9 +71,13 @@ export function autocomplete(data: AutocompleteData): string[] {
  * @returns {object} Object containing task durations and total duration.
  */
 function calculateDuration(ns: NS, target: string, time_offset: number): Record<string, number> {
-    const h_time = Math.ceil(ns.getHackTime(target));
-    const w_time = h_time * 4;
-    const g_time = Math.ceil(h_time * 3.2);
+    const target_server = ns.getServer(target);
+    const player = ns.getPlayer();
+    target_server.hackDifficulty = target_server.minDifficulty;
+    target_server.moneyAvailable = target_server.moneyMax;
+    const h_time = ns.formulas.hacking.hackTime(target_server, player);
+    const w_time = ns.formulas.hacking.weakenTime(target_server, player);
+    const g_time = ns.formulas.hacking.growTime(target_server, player);
     const t_time = Math.ceil(w_time + time_offset * 2);
     return { h: h_time, w: w_time, g: g_time, total: t_time }
 }
