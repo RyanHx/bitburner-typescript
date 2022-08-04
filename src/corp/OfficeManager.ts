@@ -10,15 +10,20 @@ export class OfficeManager implements Manager {
 
     constructor(ns: NS, division: string) {
         this.division = division;
-        for (const city of ns.corporation.getDivision(division).cities) {
+        for (const city of this.all_cities) {
             this.city_employ_pos_index[city] = 0;
-            const office = ns.corporation.getOffice(division, city);
-            for (let i = 1; i < this.positions.length; i++) {
-                if (office.employeeJobs[this.positions[i]] < office.employeeJobs[this.positions[i - 1]]) {
-                    this.city_employ_pos_index[city] = i;
-                    break;
+            try {
+                const office = ns.corporation.getOffice(division, city);
+                for (let i = 1; i < this.positions.length; i++) {
+                    if (office.employeeJobs[this.positions[i]] < office.employeeJobs[this.positions[i - 1]]) {
+                        this.city_employ_pos_index[city] = i;
+                        break;
+                    }
                 }
+            } catch {
+                ns.print(`${division} not in ${city}`);
             }
+
         }
     }
 
@@ -27,6 +32,7 @@ export class OfficeManager implements Manager {
         this.tryUpAevumOrAdv(ns);
         this.tryUpOffice(ns);
         await this.tryEmploy(ns);
+        this.tryResearch(ns);
     }
 
     private tryExpand(ns: NS) {
@@ -79,10 +85,32 @@ export class OfficeManager implements Manager {
             let open_pos = city_off.size - city_off.employees.length
             while (open_pos > 0) {
                 const hiree = <Employee>ns.corporation.hireEmployee(division.name, city);
+                if (!hiree) break;
                 if (this.city_employ_pos_index[city] === this.positions.length) this.city_employ_pos_index[city] = 0;
                 await ns.corporation.assignJob(division.name, city, hiree.name, this.positions[this.city_employ_pos_index[city]++]);
                 open_pos--;
             }
         }
     }
+
+    private tryResearch(ns: NS) {
+        const c = ns.corporation;
+        const division = c.getDivision(this.division);
+        if (division.research >= 10e3 && !c.hasResearched(division.name, "Hi-Tech R&D Laboratory")) c.research(division.name, "Hi-Tech R&D Laboratory");
+        if (division.research >= 140e3 && !c.hasResearched(division.name, "Market-TA.I")) {
+            c.research(division.name, "Market-TA.I");
+            c.research(division.name, "Market-TA.II");
+        }
+        if (c.hasResearched(division.name, "Hi-Tech R&D Laboratory") && c.hasResearched(division.name, "Market-TA.II")) {
+            const all_research = ["AutoBrew", "AutoPartyManager", "Automatic Drug Administration", "Bulk Purchasing", "CPH4 Injections", "Drones", "Drones - Assembly", "Drones - Transport", "Go-Juice", "JoyWire", "Overclock", "Self-Correcting Assemblers", "Sti.mu", "sudo.Assist", "uPgrade: Capacity.I", "uPgrade: Capacity.II", "uPgrade: Dashboard", "uPgrade: Fulcrum"];
+            for (const research of all_research) {
+                try {
+                    const cost = c.getResearchCost(division.name, research);
+                    if (!c.hasResearched(division.name, research) && c.getDivision(this.division).research > cost) c.research(division.name, research);
+                } catch {/**Research not in current industry */ }
+            }
+        }
+    }
 }
+
+
