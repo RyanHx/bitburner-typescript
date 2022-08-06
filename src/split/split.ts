@@ -8,7 +8,7 @@ export async function main(ns: NS): Promise<void> {
     const target = data._[0] ? <string>data._[0] : "iron-gym";
     const ratios: Record<string, number> = {
         hack: 1,
-        grow: 30,
+        grow: 20,
         weak: 5,
         sum: 0
     }
@@ -27,7 +27,7 @@ export async function main(ns: NS): Promise<void> {
     if (data.H === true) {
         return;
     }
-    const home_ram_threshold = 1; // Change multiplier as needed
+    const home_ram_threshold = 0.9; // Change multiplier as needed
     let home_free_ram = ns.getServerMaxRam('home');
     for (const proc of ns.ps('home')) {
         if (proc.filename.startsWith('/split/')) {
@@ -67,19 +67,19 @@ async function deploySplit(ns: NS, threads: Record<string, number>, host: string
     }
 
     if (threads.hack > 0) {
-        await ns.scp(files.hack, "home", host);
+        await ns.scp(files.hack, host, "home");
         ns.exec(files.hack, host, threads.hack, target);
     }
-    if (threads.grow > 0) {
-        await ns.scp(files.grow, "home", host);
-        ns.exec(files.grow, host, threads.grow, target);
-    }
     if (threads.weak > 0) {
-        await ns.scp(files.weak, "home", host);
-        if (spawn === true) {
-            ns.spawn(files.weak, threads.weak, target);
-        }
+        await ns.scp(files.weak, host, "home");
         ns.exec(files.weak, host, threads.weak, target);
+    }
+    if (threads.grow > 0) {
+        await ns.scp(files.grow, host, "home");
+        if (spawn === true) {
+            ns.spawn(files.grow, threads.grow, target);
+        }
+        ns.exec(files.grow, host, threads.grow, target);
     }
 }
 
@@ -176,7 +176,7 @@ function isBatching(ns: NS, host: string) {
     const proc_list = ns.ps(host);
     if (!proc_list || proc_list.length === 0) return false;
     for (const proc of proc_list) {
-        if (proc.filename === "/batch/batch.js") {
+        if (proc.filename.startsWith("/batch/")) {
             return true;
         }
     }

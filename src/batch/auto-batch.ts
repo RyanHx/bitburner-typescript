@@ -43,7 +43,7 @@ export async function main(ns: NS): Promise<void> {
             const target = <string>targets.shift();
             ns.print(`Target: ${target}`);
             ns.killall(pserv.hostname, true);
-            await ns.scp(req_files, "home", pserv.hostname);
+            await ns.scp(req_files, pserv.hostname, "home");
             ns.print("Deploying batch");
             ns.exec("/batch/batch.js", pserv.hostname, 1, target, 0.5);
         }
@@ -85,4 +85,50 @@ function getValidTargets(ns: NS, data: { [key: string]: ScriptArg }): string[] {
         targets.push(target);
     }
     return targets;
+}
+
+function checkTarget(ns: NS, target: string) {
+    const threads = {
+        h: 0,
+        w1: 0,
+        g: 0,
+        w2: 0
+    };
+    const target_server = ns.getServer(target);
+    const this_server = ns.getServer();
+    target_server.hackDifficulty = target_server.minDifficulty;
+    target_server.moneyAvailable = target_server.moneyMax;
+    const single_hack = ns.formulas.hacking.hackPercent(target_server, ns.getPlayer());
+    if (single_hack >= 0.95) threads.h = 1;
+    else {
+        threads.h = Math.floor(0.95 / single_hack);
+        const hacked = ns.formulas.hacking.growPercent()
+    }
+    threads.w1 = Math.ceil(threads.h / 25);
+    const ram_allowance = getFreeRam(ns) * 0.2;
+    const ram_cost = 0;
+    while (ram_cost > ram_allowance) {
+        //
+    }
+}
+
+// const growth_multi = hack_data.current == 1 ? 2 : 1 / (1 - hack_data.current);
+// threads.g = Math.ceil(ns.growthAnalyze(target, growth_multi/*, ns.getServer().cpuCores*/));
+// threads.w2 = Math.ceil(threads.g / 12.5);
+
+/**
+ * Get free RAM excluding current batches.
+ * @param {NS} ns
+ * @returns {number} Free RAM (GB)
+ */
+function getFreeRam(ns: NS): number {
+    const host = ns.getHostname();
+    const batch_files = ["/batch/batch_g.js", "/batch/batch_h.js", "/batch/batch_w.js"];
+    let used_ram = 0;
+    for (const process of ns.ps(host)) {
+        if (batch_files.includes(process.filename) === false) {
+            used_ram += ns.getScriptRam(process.filename, host);
+        }
+    }
+    return ns.getServerMaxRam(host) - used_ram;
 }

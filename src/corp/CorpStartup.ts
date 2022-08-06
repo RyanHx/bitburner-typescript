@@ -30,8 +30,8 @@ async function setupCities() {
         if (!c.hasWarehouse(starter_div_name, city)) c.purchaseWarehouse(starter_div_name, city);
         c.setSmartSupply(starter_div_name, city, true);
         for (let i = 0; i < 3; i++) {
-            const emp = c.hireEmployee(starter_div_name, city);
-            await c.assignJob(starter_div_name, city, emp?.name, positions[i]);
+            const emp = <Employee>c.hireEmployee(starter_div_name, city);
+            c.assignJob(starter_div_name, city, emp.name, positions[i]);
         }
         c.upgradeWarehouse(starter_div_name, city, 2);
         c.sellMaterial(starter_div_name, city, "Food", "MAX", "MP");
@@ -69,32 +69,33 @@ async function buyMaterials(ns: NS): Promise<void> {
     }
 }
 
-async function assignNextEmployees() {
+function assignNextEmployees() {
     for (const city of all_cities) {
         c.upgradeOfficeSize(starter_div_name, city, 3);
         c.upgradeOfficeSize(starter_div_name, city, 3);
         const new_emps: Employee[] = [];
         for (let i = 0; i < 6; i++) {
-            new_emps.push(c.hireEmployee(starter_div_name, city));
+            new_emps.push(<Employee>c.hireEmployee(starter_div_name, city));
         }
-        await c.assignJob(starter_div_name, city, new_emps.pop().name, positions[0]);
-        await c.assignJob(starter_div_name, city, new_emps.pop().name, positions[1]);
+        c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[0]);
+        c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[1]);
         for (let i = 0; i < 2; i++) {
-            await c.assignJob(starter_div_name, city, new_emps.pop().name, positions[3]);
-            await c.assignJob(starter_div_name, city, new_emps.pop().name, positions[4]);
+            c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[3]);
+            c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[4]);
         }
         c.upgradeWarehouse(starter_div_name, city, 2);
     }
 }
 
 async function getInvestments(ns: NS) {
-    while (c.getInvestmentOffer().funds < 210e9) await ns.sleep(1000);
+    const mults = ns.getBitNodeMultipliers();
+    while (c.getInvestmentOffer().funds < 210e9 * mults.CorporationValuation) await ns.sleep(1000);
     c.acceptInvestmentOffer();
-    await assignNextEmployees();
+    assignNextEmployees();
     while (c.getUpgradeLevel("Smart Factories") < 10) c.levelUpgrade("Smart Factories");
     while (c.getUpgradeLevel("Smart Storage") < 10) c.levelUpgrade("Smart Storage");
     for (const city of all_cities) c.upgradeWarehouse(starter_div_name, city, 7);
     await buyMaterials(ns);
-    while (c.getInvestmentOffer().funds < 5e12) await ns.sleep(1000);
+    while (c.getInvestmentOffer().funds < 5e12 * mults.CorporationValuation) await ns.sleep(1000);
     c.acceptInvestmentOffer();
 }

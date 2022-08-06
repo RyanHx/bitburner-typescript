@@ -44,7 +44,7 @@ export function numCycleForGrowthCorrected(
     const serverGrowthPercentage = server.serverGrowth / 100.0;
     const coreMultiplier = 1 + (cores - 1) / 16;
     const threadMultiplier =
-        serverGrowthPercentage * p.hacking_grow_mult * coreMultiplier * BitNodeMultipliers.ServerGrowthRate;
+        serverGrowthPercentage * p.mults.hacking_grow * coreMultiplier * BitNodeMultipliers.ServerGrowthRate;
 
     const x = threadMultiplier * Math.log(exponentialBase);
     const y = startMoney * x + Math.log(targetMoney * x);

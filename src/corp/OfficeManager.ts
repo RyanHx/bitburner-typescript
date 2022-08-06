@@ -31,7 +31,7 @@ export class OfficeManager implements Manager {
         this.tryExpand(ns);
         this.tryUpAevumOrAdv(ns);
         this.tryUpOffice(ns);
-        await this.tryEmploy(ns);
+        this.tryEmploy(ns);
         this.tryResearch(ns);
     }
 
@@ -49,15 +49,29 @@ export class OfficeManager implements Manager {
     private tryUpAevumOrAdv(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
         const main_office = ns.corporation.getOffice(this.division, this.main_city);
+        if (main_office.size >= 300) {
+            while (ns.corporation.getCorporation().funds * 0.001 > ns.corporation.getHireAdVertCost(division.name)) {
+                ns.corporation.hireAdVert(division.name);
+            }
+            return;
+        }
 
-        const off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
-        const can_up_office = ns.corporation.getCorporation().funds * 0.001 > off_up_cost && main_office.size <= 285;
+        let off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
+        let can_up_office = ns.corporation.getCorporation().funds * 0.001 > off_up_cost && main_office.size <= 285;
+        let adv_cost = ns.corporation.getHireAdVertCost(division.name);
+        let can_advert = ns.corporation.getCorporation().funds * 0.001 > adv_cost;
 
-        const advert_cost = ns.corporation.getHireAdVertCost(division.name);
-        const can_advert = ns.corporation.getCorporation().funds * 0.001 > advert_cost;
-
-        if (off_up_cost < advert_cost && can_up_office) ns.corporation.upgradeOfficeSize(division.name, this.main_city, 15);
-        else if ((off_up_cost > advert_cost || main_office.size >= 300) && can_advert) ns.corporation.hireAdVert(division.name);
+        while (off_up_cost < adv_cost && can_up_office) {
+            ns.corporation.upgradeOfficeSize(division.name, this.main_city, 15);
+            main_office.size += 15;
+            off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
+            can_up_office = ns.corporation.getCorporation().funds * 0.001 > off_up_cost && main_office.size <= 285;
+        }
+        while (off_up_cost > adv_cost && can_advert) {
+            ns.corporation.hireAdVert(division.name);
+            adv_cost = ns.corporation.getHireAdVertCost(division.name);
+            can_advert = ns.corporation.getCorporation().funds * 0.001 > adv_cost;
+        }
     }
 
     private tryUpOffice(ns: NS) {
@@ -78,7 +92,7 @@ export class OfficeManager implements Manager {
         }
     }
 
-    private async tryEmploy(ns: NS) {
+    private tryEmploy(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
         for (const city of division.cities) {
             const city_off = ns.corporation.getOffice(division.name, city);
@@ -87,7 +101,7 @@ export class OfficeManager implements Manager {
                 const hiree = <Employee>ns.corporation.hireEmployee(division.name, city);
                 if (!hiree) break;
                 if (this.city_employ_pos_index[city] === this.positions.length) this.city_employ_pos_index[city] = 0;
-                await ns.corporation.assignJob(division.name, city, hiree.name, this.positions[this.city_employ_pos_index[city]++]);
+                ns.corporation.assignJob(division.name, city, hiree.name, this.positions[this.city_employ_pos_index[city]++]);
                 open_pos--;
             }
         }

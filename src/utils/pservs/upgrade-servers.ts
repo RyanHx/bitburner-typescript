@@ -35,9 +35,10 @@ export async function main(ns: NS): Promise<void> {
 function getSplitTarget(ns: NS, hostname: string): string {
     for (const script of ns.ps(hostname)) {
         if (script.filename.startsWith("/split/")) {
-            return script.args[0];
+            return <string>script.args[0];
         }
     }
+    return "";
 }
 
 async function reset_hacks(ns: NS, split_target: string): Promise<void> {

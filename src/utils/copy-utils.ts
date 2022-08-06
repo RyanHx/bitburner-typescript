@@ -29,7 +29,7 @@ export async function copyUtils(ns: NS, servers: string[] | string): Promise<voi
     }
     for (const server of servers) {
         if (ns.serverExists(server) === true) {
-            await ns.scp(to_copy, "home", server);
+            await ns.scp(to_copy, server, "home");
         }
     }
 }

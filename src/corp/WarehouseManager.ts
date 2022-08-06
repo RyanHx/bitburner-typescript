@@ -24,7 +24,7 @@ export class WarehouseManager implements Manager {
                 if (typeof prod.sCost === 'string' && prod.sCost.startsWith("MP*")) {
                     sell_price = parseInt(prod.sCost.substring(3));
                 } else {
-                    sell_price = prod.sCost;
+                    sell_price = <number>prod.sCost;
                 }
                 this.product_prices[prod.name].curr_mp_mult = sell_price;
                 this.last_prod_mp_mult = Math.max(this.last_prod_mp_mult, sell_price);
