@@ -1,4 +1,4 @@
-import { Corporation, Employee, NS as ns } from '@ns';
+import { Corporation, Employee, NS } from '@ns';
 import { calcMaterials } from '/corp/production';
 
 
@@ -19,7 +19,14 @@ export async function startNewCorp(ns: NS): Promise<void> {
     }
     await buyMaterials(ns);
     await getInvestments(ns);
-    for (const city of all_cities) c.upgradeWarehouse(starter_div_name, city, 9);
+    for (const city of all_cities) {
+        while (c.getWarehouse(starter_div_name, city).size < 3800) {
+            try {
+                c.upgradeWarehouse(starter_div_name, city, 1);
+            } catch { /* await ns.sleep(1000); */ }
+            await ns.sleep(1000);
+        }
+    }
     await buyMaterials(ns);
     c.expandIndustry("Tobacco", "tobacco-0");
 }
@@ -83,7 +90,7 @@ function assignNextEmployees() {
             c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[3]);
             c.assignJob(starter_div_name, city, (<Employee>new_emps.pop()).name, positions[4]);
         }
-        c.upgradeWarehouse(starter_div_name, city, 2);
+        //c.upgradeWarehouse(starter_div_name, city, 2);
     }
 }
 
@@ -92,9 +99,24 @@ async function getInvestments(ns: NS) {
     while (c.getInvestmentOffer().funds < 210e9 * mults.CorporationValuation) await ns.sleep(1000);
     c.acceptInvestmentOffer();
     assignNextEmployees();
-    while (c.getUpgradeLevel("Smart Factories") < 10) c.levelUpgrade("Smart Factories");
-    while (c.getUpgradeLevel("Smart Storage") < 10) c.levelUpgrade("Smart Storage");
-    for (const city of all_cities) c.upgradeWarehouse(starter_div_name, city, 7);
+    while (c.getUpgradeLevel("Smart Factories") < 10) {
+        try {
+            c.levelUpgrade("Smart Factories");
+        } catch { await ns.sleep(1000); }
+    }
+    while (c.getUpgradeLevel("Smart Storage") < 10) {
+        try {
+            c.levelUpgrade("Smart Storage");
+        } catch { await ns.sleep(1000); }
+    }
+    for (const city of all_cities) {
+        while (c.getWarehouse(starter_div_name, city).size < 2000) {
+            try {
+                c.upgradeWarehouse(starter_div_name, city, 1);
+            } catch { /**/ }
+            await ns.sleep(1000);
+        }
+    }
     await buyMaterials(ns);
     while (c.getInvestmentOffer().funds < 5e12 * mults.CorporationValuation) await ns.sleep(1000);
     c.acceptInvestmentOffer();
