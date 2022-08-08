@@ -61,6 +61,10 @@ export class BatchManager {
             const nuked = (<string>ns.read("nuked.txt")).split(",").concat(["home"]);
             const req_ram = this.getTotalBatchRam();
             //ns.print(`Looking for ${req_ram}GB free ram.`);
+            if (Object.keys(this.batch_end_times).length >= this.delays.depth) {
+                await ns.sleep(this.durations.total);
+                continue;
+            }
             let attempts = 0;
             while (attempts < 4) {
                 for (const server of nuked) {
@@ -101,7 +105,6 @@ export class BatchManager {
      * @param {NS} ns
      */
     private async deploy(ns: NS, host: string): Promise<void> {
-        if (Object.keys(this.batch_end_times >= this.delays.depth)) return;
         const h_threads = this.threads.h - Math.ceil(this.threads.h * 0.03); // Avoid blowing past hack target
         if (this.synced || this.sync_batch_count > 2) {
             ns.exec("/batch/batch_h.js", host, h_threads || 1, this.target, this.delays.h, this.rand_token);
@@ -123,13 +126,6 @@ export class BatchManager {
             delete this.batch_end_times[token];
         }, this.durations.total);
         this.rand_token++;
-    }
-
-    private async avoidUnsafeDeploy(ns: NS) {
-        if (Object.keys(this.batch_end_times).length === 0) return;
-        while (Object.values(this.batch_end_times)[0][0] <= performance.now() && performance.now() <= Object.values(this.batch_end_times)[0][1]) {
-            await ns.sleep(1);
-        }
     }
 
     /**
