@@ -4,10 +4,11 @@ import { Manager } from '/corp/manager'
 import { OfficeManager } from '/corp/OfficeManager';
 import { WarehouseManager } from '/corp/WarehouseManager';
 
+const managers: Manager[] = [];
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("sleep");
+    ns.atExit(() => abortBuyOrders(ns));
     if (ns.corporation.getCorporation().divisions.length === 0) await startNewCorp(ns);
-    const managers: Manager[] = [];
     for (const division of ns.corporation.getCorporation().divisions) {
         managers.push(new OfficeManager(ns, division.name));
         managers.push(new WarehouseManager(ns, division.name));
@@ -50,6 +51,15 @@ function tryBuyUpgrades(ns: NS) {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function commitFraud(ns: NS, min_investment: number) {
     //
+}
+
+function abortBuyOrders(ns: NS) {
+    for (const manager of managers) {
+        try {
+            (<WarehouseManager>manager).stopAllBuyOrders(ns);
+        } catch {/* Office manager */ }
+    }
 }

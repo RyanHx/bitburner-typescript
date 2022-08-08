@@ -122,19 +122,20 @@ export class WarehouseManager implements Manager {
                 continue;
             }
             if (product.sCost == 0) {
+                // New product
                 this.product_prices[product.name].curr_mp_mult = this.last_prod_mp_mult;
             } else if (Object.values(product.cityData).some(data => data[1] - data[2] >= 0.002)) {
                 // production > sold
                 this.product_prices[product.name].curr_mp_mult -= 2000;
                 this.product_prices[product.name].max_mp_mult = this.product_prices[product.name].curr_mp_mult;
-            }
-            if (this.product_prices[product.name].curr_mp_mult + 10000 <= this.product_prices[product.name].max_mp_mult) {
+            } else if (this.product_prices[product.name].curr_mp_mult + 10000 <= this.product_prices[product.name].max_mp_mult) {
+                // Can raise price
                 this.product_prices[product.name].curr_mp_mult = this.product_prices[product.name].curr_mp_mult + 10000;
+                if (this.product_prices[product.name].curr_mp_mult > this.last_prod_mp_mult) {
+                    this.last_prod_mp_mult = this.product_prices[product.name].curr_mp_mult;
+                }
             }
             ns.corporation.sellProduct(division.name, Object.keys(product.cityData)[0], product.name, "MAX", `MP+${this.product_prices[product.name].curr_mp_mult}`, true);
-            if (this.product_prices[product.name].curr_mp_mult > this.last_prod_mp_mult) {
-                this.last_prod_mp_mult = this.product_prices[product.name].curr_mp_mult;
-            }
         }
     }
 
@@ -156,6 +157,17 @@ export class WarehouseManager implements Manager {
                         ns.corporation.sellMaterial(division.name, city, material, "0", "0");
                     }
                 } catch {/**Material not in industry */ }
+            }
+        }
+    }
+
+    stopAllBuyOrders(ns: NS): void {
+        const division = ns.corporation.getDivision(this.division);
+        const names = ["Hardware", "Robots", "AI Cores", "Real Estate"];
+        for (const city of division.cities) {
+            if (!ns.corporation.hasWarehouse(division.name, city)) continue;
+            for (const material of names) {
+                ns.corporation.buyMaterial(division.name, city, material, 0);
             }
         }
     }
