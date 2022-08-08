@@ -21,7 +21,7 @@ export class WarehouseManager implements Manager {
                 this.product_prices[prod.name] = new ProductPrices();
                 if (prod.name.startsWith("prod-")) this.prod_index = parseInt(prod.name.substring(5)) + 1;
                 let sell_price = 1;
-                if (typeof prod.sCost === 'string' && prod.sCost.startsWith("MP*")) {
+                if (typeof prod.sCost === 'string' && prod.sCost.startsWith("MP+")) {
                     sell_price = parseInt(prod.sCost.substring(3));
                 } else {
                     sell_price = <number>prod.sCost;
@@ -58,7 +58,7 @@ export class WarehouseManager implements Manager {
             ns.corporation.setSmartSupply(division.name, city, true);
             //ns.corporation.setSmartSupplyUseLeftovers(division.name,city,)
             const upgrade_cost = ns.corporation.getUpgradeWarehouseCost(division.name, city);
-            if (ns.corporation.getCorporation().funds * 0.001 > upgrade_cost) {
+            if (ns.corporation.getCorporation().funds * 0.01 > upgrade_cost) {
                 ns.corporation.upgradeWarehouse(division.name, city);
             }
         }
@@ -90,9 +90,18 @@ export class WarehouseManager implements Manager {
         const current_prods = division.products.map(product => ns.corporation.getProduct(division.name, product));
         if (current_prods.some(product => product.developmentProgress < 100)) return;
         if (current_prods.length === 3) {
-            const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0].name;
-            ns.corporation.discontinueProduct(division.name, lowest_prod);
-            delete this.product_prices[lowest_prod];
+            // Lowest product by rating
+            const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
+            const quants = Object.values(lowest_prod.cityData).map(data => data[0]);
+            if (Math.max(...quants) > 0) {
+                // Sell off remaining product
+                ns.corporation.sellProduct(division.name, Object.keys(lowest_prod.cityData)[0], lowest_prod.name, "MAX", "MP", true);
+                this.product_prices[lowest_prod.name].curr_mp_mult = 1;
+                this.product_prices[lowest_prod.name].max_mp_mult = 1;
+                return;
+            }
+            ns.corporation.discontinueProduct(division.name, lowest_prod.name);
+            delete this.product_prices[lowest_prod.name];
         }
         const prod_investment = ns.corporation.getCorporation().funds * 0.05
         const new_prod_name = `prod-${this.prod_index++}`;
@@ -114,20 +123,15 @@ export class WarehouseManager implements Manager {
             }
             if (product.sCost == 0) {
                 this.product_prices[product.name].curr_mp_mult = this.last_prod_mp_mult;
-            } else {
-                for (const city of division.cities) {
-                    if (product.cityData[city][1] - product.cityData[city][2] > 0.002) {
-                        // production > sold
-                        this.product_prices[product.name].curr_mp_mult -= 5;
-                        this.product_prices[product.name].max_mp_mult = this.product_prices[product.name].curr_mp_mult;
-                        break;
-                    }
-                }
+            } else if (Object.values(product.cityData).some(data => data[1] - data[2] >= 0.002)) {
+                // production > sold
+                this.product_prices[product.name].curr_mp_mult -= 2000;
+                this.product_prices[product.name].max_mp_mult = this.product_prices[product.name].curr_mp_mult;
             }
-            if (this.product_prices[product.name].curr_mp_mult + 10 < this.product_prices[product.name].max_mp_mult) {
-                this.product_prices[product.name].curr_mp_mult = this.product_prices[product.name].curr_mp_mult + 10;
+            if (this.product_prices[product.name].curr_mp_mult + 10000 <= this.product_prices[product.name].max_mp_mult) {
+                this.product_prices[product.name].curr_mp_mult = this.product_prices[product.name].curr_mp_mult + 10000;
             }
-            ns.corporation.sellProduct(division.name, Object.keys(product.cityData)[0], product.name, "MAX", `MP*${this.product_prices[product.name].curr_mp_mult}`, true);
+            ns.corporation.sellProduct(division.name, Object.keys(product.cityData)[0], product.name, "MAX", `MP+${this.product_prices[product.name].curr_mp_mult}`, true);
             if (this.product_prices[product.name].curr_mp_mult > this.last_prod_mp_mult) {
                 this.last_prod_mp_mult = this.product_prices[product.name].curr_mp_mult;
             }
