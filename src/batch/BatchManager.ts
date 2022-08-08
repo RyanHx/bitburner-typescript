@@ -4,20 +4,27 @@ export class BatchManager {
     private readonly threads: Record<string, number>;
     private readonly durations: Record<string, number>;
     private readonly has_copied_files: string[];
+    private readonly delays: Record<string, number>;
     private hack_percent: number;
-    private max_hack_percent: number;
     private rand_token: number;
     private synced: boolean;
     private sync_batch_count: number;
 
-    constructor(ns: NS, target: string) {
+    constructor(ns: NS, target: string, hack_percent: number) {
         this.target = target;
-        this.max_hack_percent = 0.9;
-        this.hack_percent = this.max_hack_percent;
+        this.hack_percent = hack_percent;
         this.rand_token = 0;
         this.synced = true;
         this.sync_batch_count = 0;
         this.batch_end_times = {};
+        this.delays = {
+            h: 0,
+            w1: 0,
+            g: 0,
+            w2: 0,
+            depth: 0,
+            period: 0
+        }
         this.has_copied_files = ["home"];
         this.threads = {
             h: 0,
@@ -31,7 +38,7 @@ export class BatchManager {
             g: 0,
             w2: 0,
             total: 0,
-            offset: 150
+            offset: 50
         }
         if (ns.getHostname() === "home") {
             ns.run("/utils/monitor.js", 1, target);
@@ -43,36 +50,40 @@ export class BatchManager {
         let calibration_flag = true;
         let currLevel = ns.getHackingLevel();
         main: while (true) {
-            const nuked = (<string>ns.read("nuked.txt")).split(",").concat(["home"]);
             if (ns.getHackingLevel() !== currLevel || calibration_flag === true) {
                 this.calculateDurations(ns);
                 this.calculateThreads(ns);
+                this.calculateDelays();
                 currLevel = ns.getHackingLevel();
                 calibration_flag = false;
             }
             this.checkMoneyInSync(ns);
+            const nuked = (<string>ns.read("nuked.txt")).split(",").concat(["home"]);
+            const req_ram = this.getTotalBatchRam();
+            //ns.print(`Looking for ${req_ram}GB free ram.`);
             let attempts = 0;
             while (attempts < 4) {
-                const req_ram = this.getTotalBatchRam();
-                ns.print(`Looking for ${req_ram}GB free ram.`);
                 for (const server of nuked) {
                     if (ns.getServerMaxRam(server) - ns.getServerUsedRam(server) > req_ram) {
                         if (!this.has_copied_files.includes(server)) {
                             await ns.scp(["/batch/batch_h.js", "/batch/batch_w.js", "/batch/batch_g.js"], server, "home");
                             this.has_copied_files.push(server);
                         }
-                        ns.print(`Deploying ${Math.round(this.hack_percent * 100)}% hack on ${server}.`);
+                        //ns.print(`Deploying ${Math.round(this.hack_percent * 100)}% batch on ${server}.`);
                         await this.deploy(ns, server);
+                        await ns.sleep(this.delays.period);
                         continue main;
                     }
                 }
-                ns.print(`Couldn't find free RAM on attempt ${attempts}`);
                 attempts++;
                 if (ns.getHackingLevel() !== currLevel) continue main;
             }
-            if (this.hack_percent >= 0.11 && Object.keys(this.batch_end_times).length < 5) {
-                this.hack_percent -= 0.01;
+            //ns.print("Couldn't find free RAM.");
+            if (this.hack_percent >= 0.15 && Object.values(this.batch_end_times)[0][0] > performance.now()) {
+                this.hack_percent -= 0.05;
                 calibration_flag = true;
+                ns.print(`Decremented hack to ${Math.round(this.hack_percent * 100)}%`);
+                if (Object.keys(this.batch_end_times).length > 0) await ns.sleep(this.durations.total + 1000);
             }
             await ns.sleep(1);
         }
@@ -90,9 +101,10 @@ export class BatchManager {
      * @param {NS} ns
      */
     private async deploy(ns: NS, host: string): Promise<void> {
+        if (Object.keys(this.batch_end_times >= this.delays.depth)) return;
         const h_threads = this.threads.h - Math.ceil(this.threads.h * 0.03); // Avoid blowing past hack target
         if (this.synced || this.sync_batch_count > 2) {
-            ns.exec("/batch/batch_h.js", host, h_threads || 1, this.target, this.durations.w - this.durations.h - this.durations.offset, this.rand_token);
+            ns.exec("/batch/batch_h.js", host, h_threads || 1, this.target, this.delays.h, this.rand_token);
         } else {
             this.sync_batch_count++;
             setTimeout(() => {
@@ -100,11 +112,10 @@ export class BatchManager {
                 if (this.sync_batch_count === 0) this.synced = true;
             }, this.durations.total + 50);
         }
-        const start = performance.now() + (this.durations.w - this.durations.h - this.durations.offset);
-        ns.exec("/batch/batch_w.js", host, this.threads.w1 || 1, this.target, 0, this.rand_token);
-        //await this.avoidUnsafeGrow(ns);
-        ns.exec("/batch/batch_g.js", host, this.threads.g || 1, this.target, (this.durations.w - this.durations.g) + this.durations.offset, this.rand_token);
-        ns.exec("/batch/batch_w.js", host, this.threads.w2 || 1, this.target, this.durations.total - this.durations.w2, this.rand_token);
+        const start = performance.now() + this.durations.w - this.durations.offset;
+        ns.exec("/batch/batch_w.js", host, this.threads.w1 || 1, this.target, this.delays.w1, this.rand_token);
+        ns.exec("/batch/batch_g.js", host, this.threads.g || 1, this.target, this.delays.g, this.rand_token);
+        ns.exec("/batch/batch_w.js", host, this.threads.w2 || 1, this.target, this.delays.w2, this.rand_token);
         const end = performance.now() + this.durations.total;
         this.batch_end_times[this.rand_token] = [start, end];
         const token = this.rand_token;
@@ -112,14 +123,12 @@ export class BatchManager {
             delete this.batch_end_times[token];
         }, this.durations.total);
         this.rand_token++;
-        await ns.sleep(500);
     }
 
-    private async avoidUnsafeGrow(ns: NS) {
-        let grow_start = performance.now() + (this.durations.w - this.durations.g + this.durations.offset);
-        while (Object.values(this.batch_end_times).some(start_end => start_end[0] <= grow_start && grow_start <= start_end[1])) {
+    private async avoidUnsafeDeploy(ns: NS) {
+        if (Object.keys(this.batch_end_times).length === 0) return;
+        while (Object.values(this.batch_end_times)[0][0] <= performance.now() && performance.now() <= Object.values(this.batch_end_times)[0][1]) {
             await ns.sleep(1);
-            grow_start = performance.now() + (this.durations.w - this.durations.g + this.durations.offset);
         }
     }
 
@@ -133,15 +142,44 @@ export class BatchManager {
         target_server.hackDifficulty = target_server.minDifficulty;
         target_server.moneyAvailable = target_server.moneyMax;
         this.durations.h = ns.formulas.hacking.hackTime(target_server, player);
-        target_server.hackDifficulty += this.threads.h * 0.002;
         this.durations.w = ns.formulas.hacking.weakenTime(target_server, player);
-        target_server.hackDifficulty = target_server.minDifficulty;
         target_server.moneyAvailable -= target_server.moneyAvailable * this.hack_percent;
         this.durations.g = ns.formulas.hacking.growTime(target_server, player);
-        target_server.hackDifficulty += this.threads.g * 0.002;
-        target_server.moneyAvailable = target_server.moneyMax;
-        this.durations.w2 = ns.formulas.hacking.weakenTime(target_server, player);
         this.durations.total = Math.ceil(this.durations.w + this.durations.offset * 2);
+    }
+
+    private calculateDelays() {
+        let period, depth;
+        const kW_max = Math.floor(1 + (this.durations.w - 4 * this.durations.offset) / (8 * this.durations.offset));
+        schedule: for (let kW = kW_max; kW >= 1; --kW) {
+            const t_min_W = (this.durations.w + 4 * this.durations.offset) / kW;
+            const t_max_W = (this.durations.w - 4 * this.durations.offset) / (kW - 1);
+            const kG_min = Math.ceil(Math.max((kW - 1) * 0.8, 1));
+            const kG_max = Math.floor(1 + kW * 0.8);
+            for (let kG = kG_max; kG >= kG_min; --kG) {
+                const t_min_G = (this.durations.g + 3 * this.durations.offset) / kG
+                const t_max_G = (this.durations.g - 3 * this.durations.offset) / (kG - 1);
+                const kH_min = Math.ceil(Math.max((kW - 1) * 0.25, (kG - 1) * 0.3125, 1));
+                const kH_max = Math.floor(Math.min(1 + kW * 0.25, 1 + kG * 0.3125));
+                for (let kH = kH_max; kH >= kH_min; --kH) {
+                    const t_min_H = (this.durations.h + 5 * this.durations.offset) / kH;
+                    const t_max_H = (this.durations.h - 1 * this.durations.offset) / (kH - 1);
+                    const t_min = Math.max(t_min_H, t_min_G, t_min_W);
+                    const t_max = Math.min(t_max_H, t_max_G, t_max_W);
+                    if (t_min <= t_max) {
+                        period = t_min;
+                        depth = kW;
+                        break schedule;
+                    }
+                }
+            }
+        }
+        this.delays.depth = depth;
+        this.delays.period = period;
+        this.delays.h = <number>depth * <number>period - 4 * this.durations.offset - this.durations.h;
+        this.delays.w1 = <number>depth * <number>period - 3 * this.durations.offset - this.durations.w;
+        this.delays.g = <number>depth * <number>period - 2 * this.durations.offset - this.durations.g;
+        this.delays.w2 = <number>depth * <number>period - 1 * this.durations.offset - this.durations.w;
     }
 
     private calculateThreads(ns: NS) {
@@ -168,9 +206,9 @@ export class BatchManager {
     }
 
     private checkMoneyInSync(ns: NS): void {
-        const hack_thresh = (1 - this.hack_percent) * 0.5;
-        if (ns.getServerMoneyAvailable(this.target) < Math.floor(ns.getServerMaxMoney(this.target) * hack_thresh)) {
-            ns.print("Server money out of sync, reprepping");
+        const threshold = Math.floor(ns.getServerMaxMoney(this.target) * (1 - this.hack_percent) * 0.9);
+        if (ns.getServerMoneyAvailable(this.target) < threshold) {
+            ns.print("Server money out of sync.");
             this.synced = false;
         }
     }
