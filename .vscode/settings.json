@@ -27,6 +27,6 @@
         },
     ],
     "bitburner.showFileWatcherEnabledNotification": true,
-    "bitburner.showPushSuccessNotification": true,
+    "bitburner.showPushSuccessNotification": false,
     "bitburner.fileWatcher.enable": true
 }
