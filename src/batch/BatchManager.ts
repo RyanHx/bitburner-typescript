@@ -83,7 +83,9 @@ export class BatchManager {
                 if (ns.getHackingLevel() !== currLevel) continue main;
             }
             //ns.print("Couldn't find free RAM.");
-            if (this.hack_percent >= 0.15 && Object.values(this.batch_end_times)[0][0] > performance.now()) {
+            const batch_times = Object.values(this.batch_end_times);
+            const first_batch_start = batch_times.length > 0 ? batch_times[0][0] : Infinity;
+            if (this.hack_percent >= 0.15 && first_batch_start > performance.now()) {
                 this.hack_percent -= 0.05;
                 calibration_flag = true;
                 ns.print(`Decremented hack to ${Math.round(this.hack_percent * 100)}%`);
