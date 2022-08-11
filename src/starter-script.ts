@@ -10,7 +10,7 @@ export async function main(ns: NS): Promise<void> {
     ]);
     // Start auto server purchase script
     if (data.p === true) {
-        ns.exec("/utils/pservs/purchase-server-8gb.js", "home", 1);
+        ns.exec("/utils/pservs/purchase-servers.js", "home", 1);
     }
 
     // Root all available servers
@@ -23,6 +23,6 @@ export async function main(ns: NS): Promise<void> {
         await copyUtils(ns, server);
     }
     ns.run("/split/split.js", 1, data.st, "-H");
-    ns.spawn("/batch/batch.js", 1, data.bt, 0.1);
+    ns.spawn("/batch/DistBatch.js", 1, data.bt, 0.1);
     //ns.run("auto-batch.js", 1, "--st", data.st);
 }

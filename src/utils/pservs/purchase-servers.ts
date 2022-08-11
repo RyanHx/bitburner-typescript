@@ -2,9 +2,8 @@ import { copyUtils } from "/utils/copy-utils";
 
 /** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
-    // How much RAM each purchased server will have. In this case, it'll
-    // be 8GB.
-    const ram = 8;
+    // How much RAM each purchased server will have.
+    const ram = <number>ns.args[0] ?? 8;
 
     const purchased_servers = ns.getPurchasedServers();
     const limit = ns.getPurchasedServerLimit();
@@ -20,6 +19,7 @@ export async function main(ns: NS): Promise<void> {
             const hostname = ns.purchaseServer("pserv-" + purchased_servers.length, ram);
             await copyUtils(ns, hostname);
             purchased_servers.push(hostname);
+            await ns.sleep(0);
         }
         else {
             await ns.sleep(5000);
