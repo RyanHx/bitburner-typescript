@@ -57,8 +57,7 @@ export class WarehouseManager implements Manager {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
             ns.corporation.setSmartSupply(division.name, city, true);
             //ns.corporation.setSmartSupplyUseLeftovers(division.name,city,)
-            const upgrade_cost = ns.corporation.getUpgradeWarehouseCost(division.name, city);
-            if (ns.corporation.getCorporation().funds * 0.01 > upgrade_cost) {
+            while (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getUpgradeWarehouseCost(division.name, city)) {
                 ns.corporation.upgradeWarehouse(division.name, city);
             }
         }
@@ -66,17 +65,20 @@ export class WarehouseManager implements Manager {
 
     private tryBuyBoostMats(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
+        let funds = ns.corporation.getCorporation().funds;
         const names = ["Hardware", "Robots", "AI Cores", "Real Estate"];
         for (const city of division.cities) {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
             const warehouse = ns.corporation.getWarehouse(division.name, city);
-            const mat_counts = calcMaterials(division.type, warehouse.size * 0.7);
+            const mat_counts = calcMaterials(division.type, warehouse.size * 0.6);
             if (!mat_counts) continue;
             for (const material of names) {
-                const city_mat_stock = ns.corporation.getMaterial(division.name, city, material);
-                const req_amount = mat_counts[material] - city_mat_stock.qty
-                if (req_amount > 0 && ns.corporation.getCorporation().funds * 0.01 > city_mat_stock.cost * req_amount) {
+                const city_mat_info = ns.corporation.getMaterial(division.name, city, material);
+                const req_amount = mat_counts[material] - city_mat_info.qty
+                const total_cost = city_mat_info.cost * req_amount
+                if (req_amount > 0 && funds * 0.01 > total_cost) {
                     ns.corporation.buyMaterial(division.name, city, material, req_amount / 10);
+                    funds -= total_cost;
                 } else {
                     ns.corporation.buyMaterial(division.name, city, material, 0);
                 }
@@ -87,13 +89,21 @@ export class WarehouseManager implements Manager {
     private tryCreateProduct(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
         if (!division.makesProducts) return;
+        let max_prods = 3;
+        if (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.II")) {
+            max_prods = 5;
+        }
+        else if (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.I")) {
+            max_prods = 4;
+        }
         const current_prods = division.products.map(product => ns.corporation.getProduct(division.name, product));
         if (current_prods.some(product => product.developmentProgress < 100)) return;
-        if (current_prods.length === 3) {
-            // Lowest product by rating
-            const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
+        if (current_prods.length === max_prods) {
+            // Lowest product by rating            
+            const lowest_prod = current_prods.reduce((lowest, current) => lowest.rat < current.rat ? lowest : current);
+            //const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
             const quants = Object.values(lowest_prod.cityData).map(data => data[0]);
-            if (Math.max(...quants) > 0) {
+            if (Math.max(...quants) > 0 && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
                 // Sell off remaining product
                 ns.corporation.sellProduct(division.name, Object.keys(lowest_prod.cityData)[0], lowest_prod.name, "MAX", "MP", true);
                 this.product_prices[lowest_prod.name].curr_mp_mult = 1;
@@ -126,11 +136,11 @@ export class WarehouseManager implements Manager {
                 this.product_prices[product.name].curr_mp_mult = this.last_prod_mp_mult;
             } else if (Object.values(product.cityData).some(data => data[1] - data[2] >= 0.002)) {
                 // production > sold
-                this.product_prices[product.name].curr_mp_mult -= 2000;
+                this.product_prices[product.name].curr_mp_mult -= this.product_prices[product.name].curr_mp_mult * 0.05;
                 this.product_prices[product.name].max_mp_mult = this.product_prices[product.name].curr_mp_mult;
-            } else if (this.product_prices[product.name].curr_mp_mult + 10000 <= this.product_prices[product.name].max_mp_mult) {
+            } else if (this.product_prices[product.name].curr_mp_mult * 1.1 <= this.product_prices[product.name].max_mp_mult) {
                 // Can raise price
-                this.product_prices[product.name].curr_mp_mult = this.product_prices[product.name].curr_mp_mult + 10000;
+                this.product_prices[product.name].curr_mp_mult *= 1.1;
                 if (this.product_prices[product.name].curr_mp_mult > this.last_prod_mp_mult) {
                     this.last_prod_mp_mult = this.product_prices[product.name].curr_mp_mult;
                 }
