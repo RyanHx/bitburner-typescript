@@ -28,6 +28,7 @@ export async function startNewCorp(ns: NS): Promise<void> {
         }
     }
     await buyMaterials(ns);
+    while (c.getCorporation().funds < c.getExpandIndustryCost("Tobacco")) await ns.sleep(1000);
     c.expandIndustry("Tobacco", "tobacco-0");
 }
 
@@ -57,8 +58,8 @@ async function buyMaterials(ns: NS): Promise<void> {
         const mat_counts = calcMaterials(division.type, warehouse.size * 0.6);
         if (!mat_counts) continue;
         for (const material of names) {
-            const city_mat_stock = c.getMaterial(division.name, city, material);
-            const req_amount = mat_counts[material] - city_mat_stock.qty
+            const city_mat_info = c.getMaterial(division.name, city, material);
+            const req_amount = mat_counts[material] - city_mat_info.qty
             if (req_amount > 0) {
                 c.buyMaterial(division.name, city, material, req_amount / 10);
             } else {
