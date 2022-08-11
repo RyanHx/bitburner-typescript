@@ -15,11 +15,7 @@ export async function main(ns: NS): Promise<void> {
     await copyUtils(ns, flags._);
 }
 
-export async function copyUtils(ns: NS, servers: string[] | string): Promise<void> {
-    if (!Array.isArray(servers)) {
-        servers = [servers];
-    }
-
+export async function copyUtils(ns: NS, ...servers: string[]): Promise<void> {
     const wanted_prefix = ["/utils/", "/factions/"];
     const to_copy = [];
     for (const filename of ns.ls("home")) {
