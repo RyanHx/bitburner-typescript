@@ -55,23 +55,25 @@ export class OfficeManager implements Manager {
         //     }
         //     return;
         // }
+        const canUpOffice = () => {
+            const off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
+            return off_up_cost < ns.corporation.getHireAdVertCost(division.name) && ns.corporation.getCorporation().funds * 0.1 > off_up_cost;
+        }
+        const canUpAdv = () => {
+            const adv_up_cost = ns.corporation.getHireAdVertCost(division.name);
+            return adv_up_cost < ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15) && ns.corporation.getCorporation().funds * 0.1 > adv_up_cost;
+        }
+        //let can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost// && main_office.size <= 285;
 
-        let off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
-        let can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost// && main_office.size <= 285;
+        // let adv_cost = ns.corporation.getHireAdVertCost(division.name);
+        // let can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
 
-        let adv_cost = ns.corporation.getHireAdVertCost(division.name);
-        let can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
-
-        while (off_up_cost < adv_cost && can_up_office) {
+        while (canUpOffice() === true) {
             ns.corporation.upgradeOfficeSize(division.name, this.main_city, 15);
             //main_office.size += 15;
-            off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
-            can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost //&& main_office.size <= 285;
         }
-        while (off_up_cost > adv_cost && can_advert) {
+        while (canUpAdv() === true) {
             ns.corporation.hireAdVert(division.name);
-            adv_cost = ns.corporation.getHireAdVertCost(division.name);
-            can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
         }
     }
 
@@ -86,15 +88,17 @@ export class OfficeManager implements Manager {
             //     }
             //     continue;
             // }
-            const off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 15);
-            let can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
+            //const off_up_cost = ;
+            const canUpOffice = () => {
+                return ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 15) &&
+                    main_office.size - ns.corporation.getOffice(this.division, city).size + 15 >= 60;
+            }
+            //let can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
             // if (ns.corporation.getOffice(division.name, this.main_city).size >= 300) can_up_office = can_up_office && city_off.size <= 285;
             //else 
-            can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size > 60;
-            while (can_up_office) {
+            //can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size + 15 >= 60;
+            while (canUpOffice()) {
                 ns.corporation.upgradeOfficeSize(division.name, city, 15);
-                can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
-                can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size > 60;
             }
         }
     }
