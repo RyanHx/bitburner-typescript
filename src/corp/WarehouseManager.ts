@@ -99,21 +99,24 @@ export class WarehouseManager implements Manager {
             max_prods = 4;
         }
         const current_prods = division.products.map(product => ns.corporation.getProduct(division.name, product));
-        if (current_prods.some(product => product.developmentProgress < 100)) return;
-        if (current_prods.length === max_prods) {
-            // Lowest product by rating            
-            const lowest_prod = current_prods.reduce((lowest, current) => lowest.rat < current.rat ? lowest : current);
-            //const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
-            const quants = Object.values(lowest_prod.cityData).map(data => data[0]);
-            if (Math.max(...quants) > 0 && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
-                // Sell off remaining product
-                ns.corporation.sellProduct(division.name, Object.keys(lowest_prod.cityData)[0], lowest_prod.name, "MAX", "MP", true);
-                this.product_prices[lowest_prod.name].curr_mp_mult = 1;
-                this.product_prices[lowest_prod.name].max_mp_mult = 1;
-                return;
+        if (current_prods.length > 0) {
+            const lowest_dev = current_prods.reduce((lowest, current) => lowest.developmentProgress < current.developmentProgress ? lowest : current).developmentProgress;
+            if ((current_prods.length === max_prods && lowest_dev < 100) || lowest_dev < 50) return;
+            if (current_prods.length === max_prods && lowest_dev >= 100) {
+                // Lowest product by rating
+                const lowest_prod = current_prods.reduce((lowest, current) => lowest.rat < current.rat ? lowest : current);
+                //const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
+                const quants = Object.values(lowest_prod.cityData).map(data => data[0]);
+                if (Math.max(...quants) > 0 && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
+                    // Sell off remaining product
+                    ns.corporation.sellProduct(division.name, Object.keys(lowest_prod.cityData)[0], lowest_prod.name, "MAX", "MP", true);
+                    this.product_prices[lowest_prod.name].curr_mp_mult = 1;
+                    this.product_prices[lowest_prod.name].max_mp_mult = 1;
+                    return;
+                }
+                ns.corporation.discontinueProduct(division.name, lowest_prod.name);
+                delete this.product_prices[lowest_prod.name];
             }
-            ns.corporation.discontinueProduct(division.name, lowest_prod.name);
-            delete this.product_prices[lowest_prod.name];
         }
         const prod_investment = ns.corporation.getCorporation().funds * 0.05
         const new_prod_name = `prod-${this.prod_index++}`;
