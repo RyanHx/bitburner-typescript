@@ -29,7 +29,7 @@ export class OfficeManager implements Manager {
 
     async process(ns: NS): Promise<void> {
         this.tryExpand(ns);
-        this.tryUpAevumOrAdv(ns);
+        this.tryUpMainOrAdv(ns);
         this.tryUpOffice(ns);
         this.tryEmploy(ns);
         this.tryResearch(ns);
@@ -46,49 +46,56 @@ export class OfficeManager implements Manager {
         }
     }
 
-    private tryUpAevumOrAdv(ns: NS) {
+    private tryUpMainOrAdv(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
-        const main_office = ns.corporation.getOffice(this.division, this.main_city);
-        if (main_office.size >= 300) {
-            while (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getHireAdVertCost(division.name)) {
-                ns.corporation.hireAdVert(division.name);
-            }
-            return;
-        }
+        //const main_office = ns.corporation.getOffice(this.division, this.main_city);
+        // if (main_office.size >= 300) {
+        //     while (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getHireAdVertCost(division.name)) {
+        //         ns.corporation.hireAdVert(division.name);
+        //     }
+        //     return;
+        // }
 
         let off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
-        let can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost && main_office.size <= 285;
+        let can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost// && main_office.size <= 285;
+
         let adv_cost = ns.corporation.getHireAdVertCost(division.name);
-        let can_advert = ns.corporation.getCorporation().funds * 0.01 > adv_cost;
+        let can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
 
         while (off_up_cost < adv_cost && can_up_office) {
             ns.corporation.upgradeOfficeSize(division.name, this.main_city, 15);
-            main_office.size += 15;
+            //main_office.size += 15;
             off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
-            can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost && main_office.size <= 285;
+            can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost //&& main_office.size <= 285;
         }
         while (off_up_cost > adv_cost && can_advert) {
             ns.corporation.hireAdVert(division.name);
             adv_cost = ns.corporation.getHireAdVertCost(division.name);
-            can_advert = ns.corporation.getCorporation().funds * 0.01 > adv_cost;
+            can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
         }
     }
 
     private tryUpOffice(ns: NS) {
         const division = ns.corporation.getDivision(this.division);
+        const main_office = ns.corporation.getOffice(this.division, this.main_city);
         for (const city of division.cities) {
-            const city_off = ns.corporation.getOffice(this.division, city);
-            if (city_off.size < 300 && city_off.size >= 285) {
-                if (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 3)) {
-                    ns.corporation.upgradeOfficeSize(division.name, city, 3);
-                }
-                continue;
-            }
+            //const city_off = ns.corporation.getOffice(this.division, city);
+            // if (city_off.size < 300 && city_off.size >= 285) {
+            //     if (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 3)) {
+            //         ns.corporation.upgradeOfficeSize(division.name, city, 3);
+            //     }
+            //     continue;
+            // }
             const off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 15);
             let can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
-            if (ns.corporation.getOffice(division.name, this.main_city).size >= 300) can_up_office = can_up_office && city_off.size <= 285;
-            else can_up_office = can_up_office && ns.corporation.getOffice(division.name, this.main_city).size - city_off.size > 60;
-            if (can_up_office) ns.corporation.upgradeOfficeSize(division.name, city, 15);
+            // if (ns.corporation.getOffice(division.name, this.main_city).size >= 300) can_up_office = can_up_office && city_off.size <= 285;
+            //else 
+            can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size > 60;
+            while (can_up_office) {
+                ns.corporation.upgradeOfficeSize(division.name, city, 15);
+                can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
+                can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size > 60;
+            }
         }
     }
 

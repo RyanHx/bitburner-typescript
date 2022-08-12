@@ -8,12 +8,14 @@ export class WarehouseManager implements Manager {
     readonly main_city = "Aevum";
     private readonly product_prices: Record<string, ProductPrices> = {}
     private last_prod_mp_mult: number;
+    private last_adv_upgrade: number;
     private prod_index: number;
 
     constructor(ns: NS, division: string) {
         this.division = division;
         this.prod_index = 0;
         this.last_prod_mp_mult = 1;
+        this.last_adv_upgrade = ns.corporation.getHireAdVertCost(division);
         const div_obj = ns.corporation.getDivision(this.division);
         if (div_obj.products.length > 0) {
             const prods = div_obj.products.map(prod_name => ns.corporation.getProduct(this.division, prod_name));
@@ -76,7 +78,7 @@ export class WarehouseManager implements Manager {
                 const city_mat_info = ns.corporation.getMaterial(division.name, city, material);
                 const req_amount = mat_counts[material] - city_mat_info.qty
                 const total_cost = city_mat_info.cost * req_amount
-                if (req_amount > 0 && funds * 0.01 > total_cost) {
+                if (req_amount > 0 && funds * 0.05 > total_cost) {
                     ns.corporation.buyMaterial(division.name, city, material, req_amount / 10);
                     funds -= total_cost;
                 } else {
@@ -124,6 +126,12 @@ export class WarehouseManager implements Manager {
         const division = ns.corporation.getDivision(this.division);
         if (!division.makesProducts) return;
         const current_prods = division.products.map(product => ns.corporation.getProduct(division.name, product));
+        if (ns.corporation.getHireAdVertCost(division.name) !== this.last_adv_upgrade) {
+            this.last_adv_upgrade = ns.corporation.getHireAdVertCost(division.name);
+            for (const prod in this.product_prices) {
+                this.product_prices[prod].max_mp_mult = Number.MAX_SAFE_INTEGER;
+            }
+        }
         for (const product of current_prods) {
             if (!product || product.developmentProgress < 100) continue;
             if (ns.corporation.hasResearched(division.name, "Market-TA.II")) {
@@ -185,5 +193,5 @@ export class WarehouseManager implements Manager {
 
 class ProductPrices {
     curr_mp_mult = 1;
-    max_mp_mult = Number.MAX_SAFE_INTEGER - 10;
+    max_mp_mult = Number.MAX_SAFE_INTEGER;
 }
