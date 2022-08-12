@@ -2,7 +2,7 @@ import { NS } from '@ns'
 import { GangManager } from '/gang/manager';
 
 export async function main(ns: NS): Promise<void> {
-    ns.disableLog("sleep");
+    ns.disableLog("ALL");
     while (!ns.gang.inGang()) {
         ns.print("Not in gang. Sleeping.");
         await ns.sleep(10e3);

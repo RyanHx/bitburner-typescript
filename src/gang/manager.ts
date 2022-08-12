@@ -1,15 +1,13 @@
 export class GangManager {
     private member_name_index: number;
     private need_power: boolean;
-    //private new_gang: boolean;
     private faction: string;
     private tasks: Record<string, string>;
 
     constructor(ns: NS) {
         this.member_name_index = 0;
-        this.need_power = false;
+        this.need_power = true;
         this.faction = ns.gang.getGangInformation().faction;
-        //this.new_gang = ns.gang.getMemberNames().length <= 3;
         this.tasks = {
             tw: "Territory Warfare",
             vj: "Vigilante Justice",
@@ -28,7 +26,6 @@ export class GangManager {
     }
 
     async process(ns: NS): Promise<void> {
-        //if (this.new_gang) await this.tryEarlyRecruitment(ns);
         if (ns.gang.recruitMember(`${this.member_name_index}`)) this.member_name_index++;
         this.tryAscend(ns);
         this.tryTrain(ns);
@@ -41,8 +38,10 @@ export class GangManager {
         const members = ns.gang.getMemberNames().map(name => ns.gang.getMemberInformation(name));
         for (const member of members) {
             const lowest_stat = Math.min(member.str, member.agi, member.def, member.dex);
-            if (lowest_stat < 600 && member.task !== this.tasks.train_combat) ns.gang.setMemberTask(member.name, this.tasks.train_combat);
-            //else if (lowest_stat >= 600 && member.task == this.tasks.train_combat) ns.gang.setMemberTask(member.name, this.tasks.unassign);
+            if (lowest_stat < 600 && member.task !== this.tasks.train_combat) {
+                ns.print(`Training ${member.name} to 600 combat`);
+                ns.gang.setMemberTask(member.name, this.tasks.train_combat);
+            }
         }
     }
 
@@ -55,7 +54,10 @@ export class GangManager {
                 const lowest_asc_mult = Math.min(member.agi_asc_mult, member.def_asc_mult, member.dex_asc_mult, member.str_asc_mult);
                 const valid_asc_mult = (lowest_asc_mult < 8 && highest_asc_result >= 1.2) || (lowest_asc_mult >= 8 && highest_asc_result >= 1.01);
                 const gang_info = ns.gang.getGangInformation();
-                if (valid_asc_mult && member.earnedRespect <= gang_info.respect * 0.15) ns.gang.ascendMember(member.name);
+                if (valid_asc_mult && member.earnedRespect <= gang_info.respect * 0.15) {
+                    ns.print(`Ascending ${member.name}`);
+                    ns.gang.ascendMember(member.name);
+                }
             }
         }
     }
@@ -70,31 +72,9 @@ export class GangManager {
         }
     }
 
-    // private async tryEarlyRecruitment(ns: NS) {
-    //     for (let i = 0; i < 3; i++) {
-    //         if (ns.gang.recruitMember(`${this.member_name_index}`)) this.member_name_index++;
-    //     }
-    //     while (this.getTrainedMembers(ns).length < 3) {
-    //         ns.print("Waiting for 3 trained members");
-    //         this.tryTrain(ns);
-    //         await ns.sleep(5e3);
-    //     }
-    //     for (const member of this.getTrainedMembers(ns)) {
-    //         ns.gang.setMemberTask(member.name, this.tasks.ht);
-    //     }
-    //     for (let i = 0; i < 3; i++) {
-    //         while (!ns.gang.recruitMember(`${this.member_name_index}`)) {
-    //             ns.print(`Waiting to recruit ${4 + i}th member`);
-    //             await ns.sleep(5e3);
-    //         }
-    //         ns.gang.setMemberTask(`${this.member_name_index}`, this.tasks.train_combat);
-    //         this.member_name_index++;
-    //     }
-    //     this.new_gang = false;
-    // }
-
     private tryGainTerritory(ns: NS) {
         if (ns.gang.getMemberNames().length < 12 || this.getTrainedMembers(ns).length === 0) {
+            ns.print("Less than 12 members (or none trained), avoiding war");
             this.need_power = false;
             ns.gang.setTerritoryWarfare(false);
             return;
@@ -108,9 +88,11 @@ export class GangManager {
         }
         const lowest_clash_chance = chances.length > 0 ? Math.min(...chances) : 1;
         if (lowest_clash_chance >= 0.8) {
+            ns.print("All clash at least 80% win, enabling war");
             this.need_power = false;
             ns.gang.setTerritoryWarfare(true);
         } else if (lowest_clash_chance <= 0.7 || this.need_power) {
+            ns.print("Regaining power for war");
             this.need_power = true;
             ns.gang.setTerritoryWarfare(false);
             for (const member of this.getTrainedMembers(ns)) {
@@ -131,4 +113,3 @@ export class GangManager {
         return members.filter(m => [m.agi, m.def, m.str, m.dex].every(s => s >= 600));
     }
 }
-
