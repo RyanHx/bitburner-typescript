@@ -14,7 +14,7 @@ export async function main(ns: NS): Promise<void> {
     }
     ns.tail();
     ns.disableLog('ALL');
-    const server = flags._[0];
+    const server = <string>flags._[0];
     while (true) {
 
         let money = ns.getServerMoneyAvailable(server);

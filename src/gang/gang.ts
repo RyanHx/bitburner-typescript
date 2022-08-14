@@ -9,7 +9,7 @@ export async function main(ns: NS): Promise<void> {
     }
     const manager = new GangManager(ns);
     while (true) {
-        await manager.process(ns);
+        manager.process(ns);
         await ns.sleep(1e3);
     }
 }

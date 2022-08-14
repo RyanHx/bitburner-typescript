@@ -2,8 +2,8 @@ import { NS } from '@ns'
 
 export async function main(ns: NS): Promise<void> {
     const data = ns.flags([['f', false]]);
-
-    if (ns.getServerMoneyAvailable("home") < ns.getPurchasedServerCost(data._[0])) {
+    const ram = <number>data._[0];
+    if (ns.getServerMoneyAvailable("home") < ns.getPurchasedServerCost(ram)) {
         ns.tprint("Not enough money.");
         return;
     }
@@ -12,7 +12,7 @@ export async function main(ns: NS): Promise<void> {
             const smallest = ns.getPurchasedServers().sort((a, b) => ns.getServerMaxRam(a) - ns.getServerMaxRam(b))[0];
             ns.killall(smallest);
             ns.deleteServer(smallest);
-            ns.purchaseServer(smallest, data._[0]);
+            ns.purchaseServer(smallest, ram);
             return;
         } else {
             ns.tprint("Max servers reached. Use -f to force deletion.");
@@ -22,7 +22,7 @@ export async function main(ns: NS): Promise<void> {
     while (ns.serverExists(`pserv-${serv_i}`)) {
         serv_i++;
     }
-    ns.purchaseServer(`pserv-${serv_i}`, data._[0]);
+    ns.purchaseServer(`pserv-${serv_i}`, ram);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

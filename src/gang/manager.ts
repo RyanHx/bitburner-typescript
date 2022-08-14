@@ -25,7 +25,7 @@ export class GangManager {
         this.member_name_index++;
     }
 
-    async process(ns: NS): Promise<void> {
+    process(ns: NS): void {
         if (ns.gang.recruitMember(`${this.member_name_index}`)) this.member_name_index++;
         this.tryAscend(ns);
         this.tryTrain(ns);
@@ -88,9 +88,11 @@ export class GangManager {
         }
         const lowest_clash_chance = chances.length > 0 ? Math.min(...chances) : 1;
         if (lowest_clash_chance >= 0.8) {
-            ns.print("All clash at least 80% win, enabling war");
             this.need_power = false;
-            ns.gang.setTerritoryWarfare(true);
+            if (!ns.gang.getGangInformation().territoryWarfareEngaged) {
+                ns.print("All clash at least 80% win, enabling war");
+                ns.gang.setTerritoryWarfare(true);
+            }
         } else if (lowest_clash_chance <= 0.7 || this.need_power) {
             ns.print("Regaining power for war");
             this.need_power = true;

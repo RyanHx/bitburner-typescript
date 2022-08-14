@@ -15,7 +15,8 @@ export class OfficeManager implements Manager {
             try {
                 const office = ns.corporation.getOffice(division, city);
                 for (let i = 1; i < this.positions.length; i++) {
-                    if (office.employeeJobs[this.positions[i]] < office.employeeJobs[this.positions[i - 1]]) {
+                    type EmpKey = keyof typeof office.employeeJobs;
+                    if (office.employeeJobs[this.positions[i] as EmpKey] < office.employeeJobs[this.positions[i - 1] as EmpKey]) {
                         this.city_employ_pos_index[city] = i;
                         break;
                     }

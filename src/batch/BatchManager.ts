@@ -172,8 +172,8 @@ export class BatchManager {
                 }
             }
         }
-        this.delays.depth = depth;
-        this.delays.period = period;
+        this.delays.depth = <number>depth;
+        this.delays.period = <number>period;
         this.delays.h = <number>depth * <number>period - 4 * this.durations.offset - this.durations.h;
         this.delays.w1 = <number>depth * <number>period - 3 * this.durations.offset - this.durations.w;
         this.delays.g = <number>depth * <number>period - 2 * this.durations.offset - this.durations.g;

@@ -48,7 +48,7 @@ export async function main(ns: NS): Promise<void> {
             ns.exec("/batch/batch.js", pserv.hostname, 1, target, 0.5);
         }
     }
-    const split_target = targets.length > 0 ? targets.shift() : data.st;
+    const split_target = targets.length > 0 ? <string>targets.shift() : <string>data.st;
     ns.print("Running split");
     ns.run("/split/split.js", 1, split_target, "-H", "-B");
 }
@@ -102,7 +102,7 @@ function checkTarget(ns: NS, target: string) {
     if (single_hack >= 0.95) threads.h = 1;
     else {
         threads.h = Math.floor(0.95 / single_hack);
-        const hacked = ns.formulas.hacking.growPercent()
+        const hacked = ns.formulas.hacking.growPercent(target_server, 1, ns.getPlayer());
     }
     threads.w1 = Math.ceil(threads.h / 25);
     const ram_allowance = getFreeRam(ns) * 0.2;

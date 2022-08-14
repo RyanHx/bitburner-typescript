@@ -8,13 +8,13 @@ export async function main(ns: NS): Promise<void> {
     const target = data._[0] ? <string>data._[0] : "iron-gym";
     const ratios: Record<string, number> = {
         hack: 1,
-        grow: 20,
+        grow: 30,
         weak: 5,
         sum: 0
     }
     ratios.sum = ratios.hack + ratios.grow + ratios.weak;
 
-    const server_thread_counts = getTotalNetworkThreads(ns, root_servers, data.B);
+    const server_thread_counts = getTotalNetworkThreads(ns, root_servers, <boolean>data.B);
     const network_thread_pool = getThreadsFromRatio(ratios, <number>server_thread_counts.total);
     for (const server of root_servers) {
         if (data.B === true && isBatching(ns, server) === true) {

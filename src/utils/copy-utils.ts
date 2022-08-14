@@ -12,7 +12,7 @@ export async function main(ns: NS): Promise<void> {
         return;
     }
 
-    await copyUtils(ns, flags._);
+    await copyUtils(ns, ...(<string[]>flags._));
 }
 
 export async function copyUtils(ns: NS, ...servers: string[]): Promise<void> {
