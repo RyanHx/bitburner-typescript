@@ -1,6 +1,7 @@
 import { NS, ProcessInfo } from '@ns'
 
 export async function main(ns: NS): Promise<void> {
+    ns.disableLog("sleep");
     const hashes: Record<string,number> = {}
 
     const files = ns.ls('home', '.js')

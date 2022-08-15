@@ -7,7 +7,6 @@ export class OfficeManager implements Manager {
     readonly division: string;
     readonly main_city = "Aevum";
     #city_employ_pos_index: Record<string, number> = {};
-
     constructor(ns: NS, division: string) {
         this.division = division;
         for (const city of this.all_cities) {
@@ -24,7 +23,6 @@ export class OfficeManager implements Manager {
             } catch {
                 ns.print(`${division} not in ${city}`);
             }
-
         }
     }
 
