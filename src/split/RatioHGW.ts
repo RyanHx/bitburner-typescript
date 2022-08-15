@@ -1,48 +1,48 @@
 export class RatioHack {
-    private readonly target: string;
-    private readonly ratios: Record<string, number>;
-    private readonly ignore_home: boolean;
-    private readonly ignore_batch: boolean;
-    private readonly files: Record<string, string>;
-    private readonly rooted_servs: string[];
+    readonly #target: string;
+    readonly #ratios: Record<string, number>;
+    readonly #ignore_home: boolean;
+    readonly #ignore_batch: boolean;
+    readonly #files: Record<string, string>;
+    readonly #rooted_servs: string[];
     constructor(ns: NS, target: string, hgw_ratio: number[], ignore_home: boolean, ignore_batch: boolean) {
-        this.files = {
+        this.#files = {
             hack: "/split/hack.js",
             grow: "/split/grow.js",
             weak: "/split/weaken.js"
         }
-        this.rooted_servs = (<string>ns.read("nuked.txt")).split(",");
-        this.target = target;
-        this.ratios = {
+        this.#rooted_servs = (<string>ns.read("nuked.txt")).split(",");
+        this.#target = target;
+        this.#ratios = {
             hack: hgw_ratio[0],
             grow: hgw_ratio[1],
             weak: hgw_ratio[2],
             sum: 0
         }
-        this.ratios.sum = hgw_ratio.reduce((total, current) => { return total + current }, 0)
-        this.ignore_home = ignore_home;
-        this.ignore_batch = ignore_batch;
+        this.#ratios.sum = hgw_ratio.reduce((total, current) => { return total + current }, 0)
+        this.#ignore_home = ignore_home;
+        this.#ignore_batch = ignore_batch;
     }
 
     async run(ns: NS): Promise<void> {
-        const server_thread_counts = this.getTotalNetworkThreads(ns);
-        const network_thread_pool = this.getThreadsFromRatio(<number>server_thread_counts.total);
-        for (const server of this.rooted_servs) {
-            if (this.ignore_batch === true && this.isBatching(ns, server) === true) {
+        const server_thread_counts = this.#getTotalNetworkThreads(ns);
+        const network_thread_pool = this.#getThreadsFromRatio(<number>server_thread_counts.total);
+        for (const server of this.#rooted_servs) {
+            if (this.#ignore_batch === true && this.#isBatching(ns, server) === true) {
                 continue;
             }
-            const server_hgw = this.getServerThreadsFromPool(ns, network_thread_pool, server_thread_counts.servs[server]);
-            await this.deploySplit(ns, server_hgw, server);
+            const server_hgw = this.#getServerThreadsFromPool(ns, network_thread_pool, server_thread_counts.servs[server]);
+            await this.#deploySplit(ns, server_hgw, server);
         }
 
-        if (this.ignore_home === true) {
+        if (this.#ignore_home === true) {
             return;
         }
-        const home_free_ram = this.getFreeRam(ns, "home");
+        const home_free_ram = this.#getFreeRam(ns, "home");
         const home_ram_threshold = 0.9; // Change multiplier as needed
         const total_home_threads = Math.floor((home_free_ram * home_ram_threshold) / 1.75);
-        const ratioed_home_threads = this.getThreadsFromRatio(total_home_threads);
-        await this.deploySplit(ns, ratioed_home_threads, "home", true);
+        const ratioed_home_threads = this.#getThreadsFromRatio(total_home_threads);
+        await this.#deploySplit(ns, ratioed_home_threads, "home", true);
     }
 
     /**
@@ -50,17 +50,20 @@ export class RatioHack {
      * @param ns Netscript interface.
      * @returns Object containing thread capacity for each server, as well as total thread capacity across all servers.
      */
-    private getTotalNetworkThreads(ns: NS) {
+    #getTotalNetworkThreads(ns: NS): {
+        total: number;
+        servs: Record<string, number>;
+    } {
         const network_threads = {
             total: 0,
             servs: {} as Record<string, number>
         }
 
-        for (const server of this.rooted_servs) {
-            if (this.ignore_batch === true && this.isBatching(ns, server) === true) {
+        for (const server of this.#rooted_servs) {
+            if (this.#ignore_batch === true && this.#isBatching(ns, server) === true) {
                 continue;
             }
-            const freeram = this.getFreeRam(ns, server);
+            const freeram = this.#getFreeRam(ns, server);
             const server_threads = Math.floor(freeram / 1.75); // h/g/w scripts = 1.75gb ram usage each
             network_threads.servs[server] = server_threads; // e.g. { "home" : 20 }
             network_threads.total += server_threads;
@@ -75,25 +78,25 @@ export class RatioHack {
      * @param host Server on which to run tasks.
      * @param spawn Should final .exec call instead be a .spawn (terminating the current script)
      */
-    private async deploySplit(ns: NS, threads: Record<string, number>, host: string, spawn = false): Promise<void> {
-        ns.scriptKill(this.files.hack, host);
-        ns.scriptKill(this.files.grow, host);
-        ns.scriptKill(this.files.weak, host);
+    async #deploySplit(ns: NS, threads: Record<string, number>, host: string, spawn = false): Promise<void> {
+        ns.scriptKill(this.#files.hack, host);
+        ns.scriptKill(this.#files.grow, host);
+        ns.scriptKill(this.#files.weak, host);
 
         if (threads.hack > 0) {
-            await ns.scp(this.files.hack, host, "home");
-            ns.exec(this.files.hack, host, threads.hack, this.target);
+            await ns.scp(this.#files.hack, host, "home");
+            ns.exec(this.#files.hack, host, threads.hack, this.#target);
         }
         if (threads.weak > 0) {
-            await ns.scp(this.files.weak, host, "home");
-            ns.exec(this.files.weak, host, threads.weak, this.target);
+            await ns.scp(this.#files.weak, host, "home");
+            ns.exec(this.#files.weak, host, threads.weak, this.#target);
         }
         if (threads.grow > 0) {
-            await ns.scp(this.files.grow, host, "home");
+            await ns.scp(this.#files.grow, host, "home");
             if (spawn === true) {
-                ns.spawn(this.files.grow, threads.grow, this.target);
+                ns.spawn(this.#files.grow, threads.grow, this.#target);
             }
-            ns.exec(this.files.grow, host, threads.grow, this.target);
+            ns.exec(this.#files.grow, host, threads.grow, this.#target);
         }
     }
 
@@ -102,11 +105,16 @@ export class RatioHack {
     * @param total_threads Total number of threads to split into ratio.
     * @returns Object containing thread counts as per provided ratio.
     */
-    private getThreadsFromRatio(total_threads: number) {
+    #getThreadsFromRatio(total_threads: number): {
+        hack: number;
+        grow: number;
+        weak: number;
+        total: number;
+    } {
         const threads = {
-            hack: Math.floor((this.ratios.hack / this.ratios.sum) * total_threads),
-            grow: Math.floor((this.ratios.grow / this.ratios.sum) * total_threads),
-            weak: Math.floor((this.ratios.weak / this.ratios.sum) * total_threads),
+            hack: Math.floor((this.#ratios.hack / this.#ratios.sum) * total_threads),
+            grow: Math.floor((this.#ratios.grow / this.#ratios.sum) * total_threads),
+            weak: Math.floor((this.#ratios.weak / this.#ratios.sum) * total_threads),
             total: 0
         }
         threads.total = threads.hack + threads.grow + threads.weak;
@@ -125,7 +133,11 @@ export class RatioHack {
      * @param {number} total_server_threads Thread capacity of current server.
      * @returns {object} Total threads for each task.
      */
-    private getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, total_server_threads: number) {
+    #getServerThreadsFromPool(ns: NS, thread_pool: Record<string, number>, total_server_threads: number): {
+        hack: number;
+        grow: number;
+        weak: number;
+    } {
         const hgw_threads = {
             hack: 0,
             grow: 0,
@@ -160,7 +172,7 @@ export class RatioHack {
      * @param host Hostname of server to check running scripts.
      * @returns Is host running batch.js.
      */
-    private isBatching(ns: NS, host: string) {
+    #isBatching(ns: NS, host: string): boolean {
         const proc_list = ns.ps(host);
         if (!proc_list || proc_list.length === 0) return false;
         for (const proc of proc_list) {
@@ -177,10 +189,10 @@ export class RatioHack {
      * @param server host to check RAM
      * @returns Amount of free RAM ignoring existing split scripts (GB)
      */
-    private getFreeRam(ns: NS, server: string) {
+    #getFreeRam(ns: NS, server: string): number {
         let freeram = ns.getServerMaxRam(server);
         for (const proc of ns.ps(server)) {
-            if (proc.filename === this.files.hack || proc.filename === this.files.weak || proc.filename === this.files.grow) continue;
+            if (proc.filename === this.#files.hack || proc.filename === this.#files.weak || proc.filename === this.#files.grow) continue;
             freeram -= ns.getScriptRam(proc.filename, server);
         }
         return freeram;

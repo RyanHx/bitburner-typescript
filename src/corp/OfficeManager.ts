@@ -6,18 +6,18 @@ export class OfficeManager implements Manager {
     readonly positions: string[] = ["Operations", "Engineer", "Business", "Management", "Research & Development"];
     readonly division: string;
     readonly main_city = "Aevum";
-    private city_employ_pos_index: Record<string, number> = {};
+    #city_employ_pos_index: Record<string, number> = {};
 
     constructor(ns: NS, division: string) {
         this.division = division;
         for (const city of this.all_cities) {
-            this.city_employ_pos_index[city] = 0;
+            this.#city_employ_pos_index[city] = 0;
             try {
                 const office = ns.corporation.getOffice(division, city);
                 for (let i = 1; i < this.positions.length; i++) {
                     type EmpKey = keyof typeof office.employeeJobs;
                     if (office.employeeJobs[this.positions[i] as EmpKey] < office.employeeJobs[this.positions[i - 1] as EmpKey]) {
-                        this.city_employ_pos_index[city] = i;
+                        this.#city_employ_pos_index[city] = i;
                         break;
                     }
                 }
@@ -29,14 +29,14 @@ export class OfficeManager implements Manager {
     }
 
     async process(ns: NS): Promise<void> {
-        this.tryExpand(ns);
-        this.tryUpMainOrAdv(ns);
-        this.tryUpOffice(ns);
-        this.tryEmploy(ns);
-        this.tryResearch(ns);
+        this.#tryExpand(ns);
+        this.#tryUpMainOrAdv(ns);
+        this.#tryUpOffice(ns);
+        this.#tryEmploy(ns);
+        this.#tryResearch(ns);
     }
 
-    private tryExpand(ns: NS) {
+    #tryExpand(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
         if (division.cities.length === 6) return;
         for (const city of this.all_cities) {
@@ -47,7 +47,7 @@ export class OfficeManager implements Manager {
         }
     }
 
-    private tryUpMainOrAdv(ns: NS) {
+    #tryUpMainOrAdv(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
         //const main_office = ns.corporation.getOffice(this.division, this.main_city);
         // if (main_office.size >= 300) {
@@ -78,7 +78,7 @@ export class OfficeManager implements Manager {
         }
     }
 
-    private tryUpOffice(ns: NS) {
+    #tryUpOffice(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
         const main_office = ns.corporation.getOffice(this.division, this.main_city);
         for (const city of division.cities) {
@@ -104,7 +104,7 @@ export class OfficeManager implements Manager {
         }
     }
 
-    private tryEmploy(ns: NS) {
+    #tryEmploy(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
         for (const city of division.cities) {
             const city_off = ns.corporation.getOffice(division.name, city);
@@ -112,14 +112,14 @@ export class OfficeManager implements Manager {
             while (open_pos > 0) {
                 const hiree = <Employee>ns.corporation.hireEmployee(division.name, city);
                 if (!hiree) break;
-                if (this.city_employ_pos_index[city] === this.positions.length) this.city_employ_pos_index[city] = 0;
-                ns.corporation.assignJob(division.name, city, hiree.name, this.positions[this.city_employ_pos_index[city]++]);
+                if (this.#city_employ_pos_index[city] === this.positions.length) this.#city_employ_pos_index[city] = 0;
+                ns.corporation.assignJob(division.name, city, hiree.name, this.positions[this.#city_employ_pos_index[city]++]);
                 open_pos--;
             }
         }
     }
 
-    private tryResearch(ns: NS) {
+    #tryResearch(ns: NS): void {
         const c = ns.corporation;
         const division = c.getDivision(this.division);
         if (division.research >= 10e3 && !c.hasResearched(division.name, "Hi-Tech R&D Laboratory")) c.research(division.name, "Hi-Tech R&D Laboratory");
