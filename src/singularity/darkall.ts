@@ -6,5 +6,7 @@ export async function main(ns: NS): Promise<void> {
     for (const file of files) {
         ns.singularity.purchaseProgram(file);
     }
-    ns.spawn("/utils/root.js");
+    const root = ns.run("/utils/root.js");
+    while (ns.isRunning(root)) await ns.sleep(50);
+    ns.tprint("Darkall finished.");
 }
