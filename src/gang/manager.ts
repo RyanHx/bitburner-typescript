@@ -1,15 +1,15 @@
 import { GangMemberInfo } from "/../NetscriptDefinitions";
 
 export class GangManager {
+    readonly faction: string;
     #member_name_index: number;
     #need_power: boolean;
-    #faction: string;
     #tasks: Record<string, string>;
 
     constructor(ns: NS) {
         this.#member_name_index = 0;
         this.#need_power = true;
-        this.#faction = ns.gang.getGangInformation().faction;
+        this.faction = ns.gang.getGangInformation().faction;
         this.#tasks = {
             tw: "Territory Warfare",
             vj: "Vigilante Justice",
@@ -22,7 +22,7 @@ export class GangManager {
             try {
                 const index = parseInt(name);
                 this.#member_name_index = Math.max(this.#member_name_index, index);
-            } catch {/* */ }
+            } catch {/**/ }
         }
         this.#member_name_index++;
     }
@@ -75,8 +75,8 @@ export class GangManager {
     }
 
     #tryGainTerritory(ns: NS): void {
-        if (ns.gang.getMemberNames().length < 12 || this.#getTrainedMembers(ns).length === 0) {
-            ns.print("Less than 12 members (or none trained), avoiding war");
+        if (ns.gang.getMemberNames().length < 12 || this.#getTrainedMembers(ns).length === 0 || Object.values(ns.gang.getOtherGangInformation()).filter(g => g.territory > 0).length > 3) {
+            ns.print("Less than 12 members/none trained/still more than 2 rival gangs - avoiding war");
             this.#need_power = false;
             ns.gang.setTerritoryWarfare(false);
             return;
@@ -84,7 +84,7 @@ export class GangManager {
         const chances: number[] = [];
         const gangs = ns.gang.getOtherGangInformation();
         for (const gang in gangs) {
-            if (gang !== this.#faction && gangs[gang].territory > 0) {
+            if (gang !== this.faction && gangs[gang].territory > 0) {
                 chances.push(ns.gang.getChanceToWinClash(gang));
             }
         }
