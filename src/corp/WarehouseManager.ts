@@ -59,7 +59,7 @@ export class WarehouseManager implements Manager {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
             ns.corporation.setSmartSupply(division.name, city, true);
             //ns.corporation.setSmartSupplyUseLeftovers(division.name,city,)
-            while (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getUpgradeWarehouseCost(division.name, city)) {
+            while (ns.corporation.getCorporation().funds * 0.1 > ns.corporation.getUpgradeWarehouseCost(division.name, city)) {
                 ns.corporation.upgradeWarehouse(division.name, city);
             }
         }
@@ -67,7 +67,7 @@ export class WarehouseManager implements Manager {
 
     #tryBuyBoostMats(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
-        let funds = ns.corporation.getCorporation().funds;
+        let funds = ns.corporation.getCorporation().funds / ns.corporation.getCorporation().divisions.length;
         const names = ["Hardware", "Robots", "AI Cores", "Real Estate"];
         for (const city of division.cities) {
             if (!ns.corporation.hasWarehouse(division.name, city)) continue;
@@ -78,7 +78,7 @@ export class WarehouseManager implements Manager {
                 const city_mat_info = ns.corporation.getMaterial(division.name, city, material);
                 const req_amount = mat_counts[material] - city_mat_info.qty
                 const total_cost = city_mat_info.cost * req_amount
-                if (req_amount > 0 && funds * 0.05 > total_cost) {
+                if (req_amount > 0 && funds > total_cost) {
                     ns.corporation.buyMaterial(division.name, city, material, req_amount / 10);
                     funds -= total_cost;
                 } else {
@@ -91,21 +91,13 @@ export class WarehouseManager implements Manager {
     #tryCreateProduct(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
         if (!division.makesProducts) return;
-        let max_prods = 3;
-        if (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.II")) {
-            max_prods = 5;
-        }
-        else if (ns.corporation.hasResearched(division.name, "uPgrade: Capacity.I")) {
-            max_prods = 4;
-        }
+        const max_prods = ns.corporation.hasResearched(division.name, "uPgrade: Capacity.I") ? ns.corporation.hasResearched(division.name, "uPgrade: Capacity.II") ? 5 : 4 : 3
         const current_prods = division.products.map(product => ns.corporation.getProduct(division.name, product));
         if (current_prods.length > 0) {
-            const lowest_dev = current_prods.reduce((lowest, current) => lowest.developmentProgress < current.developmentProgress ? lowest : current).developmentProgress;
-            if ((current_prods.length === max_prods && lowest_dev < 100) || lowest_dev < 50) return;
-            if (current_prods.length === max_prods && lowest_dev >= 100) {
+            const lowest_prod = current_prods.reduce((lowest, current) => lowest.rat < current.rat ? lowest : current);
+            if (current_prods.some(prod => prod.developmentProgress < 100)) return;
+            if (current_prods.length === max_prods) {
                 // Lowest product by rating
-                const lowest_prod = current_prods.reduce((lowest, current) => lowest.rat < current.rat ? lowest : current);
-                //const lowest_prod = current_prods.sort((a, b) => a.rat - b.rat)[0];
                 const quants = Object.values(lowest_prod.cityData).map(data => data[0]);
                 if (Math.max(...quants) > 0 && !ns.corporation.hasResearched(division.name, "Market-TA.II")) {
                     // Sell off remaining product
@@ -118,7 +110,7 @@ export class WarehouseManager implements Manager {
                 delete this.#product_prices[lowest_prod.name];
             }
         }
-        const prod_investment = ns.corporation.getCorporation().funds * 0.05
+        const prod_investment = ns.corporation.getCorporation().funds * 0.2;
         const new_prod_name = `prod-${this.#prod_index++}`;
         ns.corporation.makeProduct(division.name, this.main_city, new_prod_name, prod_investment / 2, prod_investment / 2);
         this.#product_prices[new_prod_name] = new ProductPrices();
@@ -147,7 +139,7 @@ export class WarehouseManager implements Manager {
                 this.#product_prices[product.name].curr_mp_mult = this.#last_prod_mp_mult;
             } else if (Object.values(product.cityData).some(data => data[1] - data[2] >= 0.002)) {
                 // production > sold
-                this.#product_prices[product.name].curr_mp_mult -= this.#product_prices[product.name].curr_mp_mult * 0.05;
+                this.#product_prices[product.name].curr_mp_mult *= 0.95;
                 this.#product_prices[product.name].max_mp_mult = this.#product_prices[product.name].curr_mp_mult;
             } else if (this.#product_prices[product.name].curr_mp_mult * 1.1 <= this.#product_prices[product.name].max_mp_mult) {
                 // Can raise price

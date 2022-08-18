@@ -47,7 +47,7 @@ function tryBuyUpgrades(ns: NS) {
     const other_levels = ["DreamSense", "Wilson Analytics", "ABC SalesBots", "Project Insight"];
     const core_upgraded = core_levels.every(upgrade => ns.corporation.getUpgradeLevel(upgrade) >= 20);
     for (const upgrade of !core_upgraded ? core_levels : core_levels.concat(other_levels)) {
-        if (ns.corporation.getUpgradeLevelCost(upgrade) < ns.corporation.getCorporation().funds * 0.001) ns.corporation.levelUpgrade(upgrade);
+        if (ns.corporation.getUpgradeLevelCost(upgrade) < ns.corporation.getCorporation().funds * 0.01) ns.corporation.levelUpgrade(upgrade);
     }
 }
 
