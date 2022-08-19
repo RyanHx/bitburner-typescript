@@ -114,6 +114,7 @@ async function getInvestments(ns: NS) {
         while (c.getWarehouse(starter_div_name, city).size < 2000) {
             try {
                 c.upgradeWarehouse(starter_div_name, city, 1);
+                await buyMaterials(ns);
             } catch { /**/ }
             await ns.sleep(1000);
         }
