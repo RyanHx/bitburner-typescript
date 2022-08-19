@@ -21,12 +21,14 @@ export async function main(ns: NS): Promise<void> {
     if (<boolean>data.F === true) return;
     const faction_servs: Record<string, string> = { "CyberSec": "CSEC", "NiteSec": "avmnite-02h", "The Black Hand": "I.I.I.I", "BitRunners": "run4theh111z" };
     const not_joined_facts = Object.keys(faction_servs).filter(faction => !ns.getPlayer().factions.includes(faction) && ns.getServer(faction_servs[faction]).backdoorInstalled);
-    if (not_joined_facts.length === 0) return;
-    ns.tprint("Waiting for faction invites.");
-    while (not_joined_facts.some(faction => !ns.getPlayer().factions.includes(faction))) {
-        await ns.sleep(100);
-        for (const faction of not_joined_facts) {
-            ns.singularity.joinFaction(faction);
+    if (not_joined_facts.length > 0) {
+        ns.tprint("Waiting for faction invites.");
+        while (not_joined_facts.some(faction => !ns.getPlayer().factions.includes(faction))) {
+            await ns.sleep(100);
+            for (const faction of not_joined_facts) {
+                if (ns.singularity.joinFaction(faction)) ns.tprint(`Joined ${faction}`);
+            }
         }
     }
+    ns.tprint("Joined all possible story factions.");
 }
