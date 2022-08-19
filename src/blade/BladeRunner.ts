@@ -14,10 +14,12 @@ const types = {
 }
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("sleep");
+    ns.disableLog("bladeburner.upgradeSkill");
     let last_pop_analysis = 0;
     let current_city = "Sector-12";
+    let best_op = "";
     while (true) {
-        if (performance.now() - last_pop_analysis > 1.8e6) {
+        if ((performance.now() - last_pop_analysis) > (ns.bladeburner.getBonusTime() > 0 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
             current_city = await getHighestCityPop(ns);
             ns.bladeburner.switchCity(current_city);
             last_pop_analysis = performance.now();
@@ -31,7 +33,7 @@ export async function main(ns: NS): Promise<void> {
         }
         const stamina = ns.bladeburner.getStamina();
         if (stamina[0] > Math.ceil(stamina[1] * 0.55)) {
-            await tryBlackOp(ns);
+            best_op = await tryBlackOp(ns, best_op);
             const best_task = getBestTask(ns);
             if (ns.bladeburner.getCurrentAction().name !== best_task.name) {
                 ns.print(`Best task returned: ${best_task.name}`);
@@ -47,6 +49,7 @@ export async function main(ns: NS): Promise<void> {
 
 async function getHighestCityPop(ns: NS) {
     ns.print("Calibrating city populations.");
+    ns.disableLog("bladeburner.startAction");
     const city_pops: Record<string, number> = {};
     for (const city of all_cities) {
         ns.bladeburner.switchCity(city);
@@ -57,6 +60,7 @@ async function getHighestCityPop(ns: NS) {
         city_pops[city] = ns.bladeburner.getCityEstimatedPopulation(city);
         ns.print(`${city}: ${city_pops[city]}`);
     }
+    ns.enableLog("bladeburner.startAction");
     return Object.keys(city_pops).reduce((best, current) => city_pops[current] > city_pops[best] ? current : best);
 }
 
@@ -92,15 +96,19 @@ function getBestTask(ns: NS): BladeburnerCurAction {
     return { name: "Incite Violence", type: types.g };
 }
 
-async function tryBlackOp(ns: NS) {
-    const blackops = ns.bladeburner.getBlackOpNames();
+async function tryBlackOp(ns: NS, best_op: string) {
+    const blackops = ns.bladeburner.getBlackOpNames().slice(best_op === "" ? 0 : ns.bladeburner.getBlackOpNames().indexOf(best_op) + 1);
     for (const op of blackops) {
         if (ns.bladeburner.getRank() < ns.bladeburner.getBlackOpRank(op)) break;
         if (ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.8) {
-            ns.bladeburner.startAction(types.b, op);
-            while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
+            if (!ns.bladeburner.startAction(types.b, op)) {
+                best_op = op;
+            } else {
+                while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
+            }
         }
     }
+    return best_op;
 }
 
 function upgradeSkills(ns: NS) {
