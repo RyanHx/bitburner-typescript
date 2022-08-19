@@ -37,10 +37,11 @@ export async function main(ns: NS): Promise<void> {
                 ns.print(`Best task returned: ${best_task.name}`);
                 ns.bladeburner.startAction(best_task.type, best_task.name);
             }
+            await ns.sleep(1000);
         } else {
             await recoverStamina(ns);
         }
-        await ns.sleep(1000);
+        upgradeSkills(ns);
     }
 }
 
@@ -94,9 +95,18 @@ function getBestTask(ns: NS): BladeburnerCurAction {
 async function tryBlackOp(ns: NS) {
     const blackops = ns.bladeburner.getBlackOpNames();
     for (const op of blackops) {
-        if (ns.bladeburner.getRank() >= ns.bladeburner.getBlackOpRank(op) && ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.8) {
+        if (ns.bladeburner.getRank() < ns.bladeburner.getBlackOpRank(op)) break;
+        if (ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.8) {
             ns.bladeburner.startAction(types.b, op);
             while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
         }
     }
+}
+
+function upgradeSkills(ns: NS) {
+    ns.bladeburner.upgradeSkill("Blade's Intuition");
+    ns.bladeburner.upgradeSkill("Digital Observer");
+    ns.bladeburner.upgradeSkill("Reaper");
+    ns.bladeburner.upgradeSkill("Overclock");
+    ns.bladeburner.upgradeSkill("Evasive System");
 }
