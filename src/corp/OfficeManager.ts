@@ -47,13 +47,9 @@ export class OfficeManager implements Manager {
 
     #tryUpMainOrAdv(ns: NS): void {
         const division = ns.corporation.getDivision(this.division);
-        //const main_office = ns.corporation.getOffice(this.division, this.main_city);
-        // if (main_office.size >= 300) {
-        //     while (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getHireAdVertCost(division.name)) {
-        //         ns.corporation.hireAdVert(division.name);
-        //     }
-        //     return;
-        // }
+        while (ns.corporation.getOffice(this.division, this.main_city).size < 30 && ns.corporation.getCorporation().funds > ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 3))
+            ns.corporation.upgradeOfficeSize(division.name, this.main_city, 3);
+
         const canUpOffice = () => {
             const off_up_cost = ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15);
             return off_up_cost < ns.corporation.getHireAdVertCost(division.name) && ns.corporation.getCorporation().funds * 0.1 > off_up_cost;
@@ -62,14 +58,8 @@ export class OfficeManager implements Manager {
             const adv_up_cost = ns.corporation.getHireAdVertCost(division.name);
             return adv_up_cost < ns.corporation.getOfficeSizeUpgradeCost(this.division, this.main_city, 15) && ns.corporation.getCorporation().funds * 0.1 > adv_up_cost;
         }
-        //let can_up_office = ns.corporation.getCorporation().funds * 0.1 > off_up_cost// && main_office.size <= 285;
-
-        // let adv_cost = ns.corporation.getHireAdVertCost(division.name);
-        // let can_advert = ns.corporation.getCorporation().funds * 0.1 > adv_cost;
-
         while (canUpOffice() === true) {
             ns.corporation.upgradeOfficeSize(division.name, this.main_city, 15);
-            //main_office.size += 15;
         }
         while (canUpAdv() === true) {
             ns.corporation.hireAdVert(division.name);
@@ -80,22 +70,10 @@ export class OfficeManager implements Manager {
         const division = ns.corporation.getDivision(this.division);
         const main_office = ns.corporation.getOffice(this.division, this.main_city);
         for (const city of division.cities) {
-            //const city_off = ns.corporation.getOffice(this.division, city);
-            // if (city_off.size < 300 && city_off.size >= 285) {
-            //     if (ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 3)) {
-            //         ns.corporation.upgradeOfficeSize(division.name, city, 3);
-            //     }
-            //     continue;
-            // }
-            //const off_up_cost = ;
             const canUpOffice = () => {
                 return ns.corporation.getCorporation().funds * 0.01 > ns.corporation.getOfficeSizeUpgradeCost(this.division, city, 15) &&
                     main_office.size - ns.corporation.getOffice(this.division, city).size + 15 >= 60;
             }
-            //let can_up_office = ns.corporation.getCorporation().funds * 0.01 > off_up_cost;
-            // if (ns.corporation.getOffice(division.name, this.main_city).size >= 300) can_up_office = can_up_office && city_off.size <= 285;
-            //else 
-            //can_up_office = can_up_office && main_office.size - ns.corporation.getOffice(this.division, city).size + 15 >= 60;
             while (canUpOffice()) {
                 ns.corporation.upgradeOfficeSize(division.name, city, 15);
             }
