@@ -17,23 +17,24 @@ export async function main(ns: NS): Promise<void> {
     ns.disableLog("bladeburner.upgradeSkill");
     let last_pop_analysis = 0;
     let current_city = "Sector-12";
-    let best_op = "";
     while (true) {
-        if ((performance.now() - last_pop_analysis) > (ns.bladeburner.getBonusTime() > 0 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
+        if (Date.now() - last_pop_analysis > (ns.bladeburner.getBonusTime() > 0 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
             current_city = await getHighestCityPop(ns);
             ns.bladeburner.switchCity(current_city);
-            last_pop_analysis = performance.now();
+            last_pop_analysis = Date.now();
         }
         if (ns.bladeburner.getCityChaos(current_city) >= 50) {
             ns.print("Lowering city chaos.");
-            while (ns.bladeburner.getCityChaos(current_city) > 0) {
+            const chaos_start = Date.now();
+            while (ns.bladeburner.getCityChaos(current_city) > 10) {
                 if (ns.bladeburner.getCurrentAction().name !== tasks.d) ns.bladeburner.startAction(types.g, tasks.d);
                 await ns.sleep(1000);
             }
+            last_pop_analysis += Date.now() - chaos_start;
         }
         const stamina = ns.bladeburner.getStamina();
         if (stamina[0] > Math.ceil(stamina[1] * 0.55)) {
-            best_op = await tryBlackOp(ns, best_op);
+            await tryBlackOp(ns);
             const best_task = getBestTask(ns);
             if (ns.bladeburner.getCurrentAction().name !== best_task.name) {
                 ns.print(`Best task returned: ${best_task.name}`);
@@ -81,12 +82,12 @@ function getBestTask(ns: NS): BladeburnerCurAction {
     const contracts = ns.bladeburner.getContractNames();
     const ops = ns.bladeburner.getOperationNames();
     for (let i = ops.length - 1; i >= 0; i--) {
-        if (ns.bladeburner.getActionEstimatedSuccessChance(types.o, ops[i])[0] >= 0.8 && ns.bladeburner.getActionCountRemaining(types.o, ops[i]) > 0) {
+        if (ns.bladeburner.getActionEstimatedSuccessChance(types.o, ops[i])[0] >= 0.7 && ns.bladeburner.getActionCountRemaining(types.o, ops[i]) > 0) {
             return { name: ops[i], type: types.o };
         }
     }
     for (let i = contracts.length - 1; i >= 0; i--) {
-        if (ns.bladeburner.getActionEstimatedSuccessChance(types.c, contracts[i])[0] >= 0.8 && ns.bladeburner.getActionCountRemaining(types.c, contracts[i]) > 0) {
+        if (ns.bladeburner.getActionEstimatedSuccessChance(types.c, contracts[i])[0] >= 0.7 && ns.bladeburner.getActionCountRemaining(types.c, contracts[i]) > 0) {
             return { name: contracts[i], type: types.c };
         }
     }
@@ -96,19 +97,14 @@ function getBestTask(ns: NS): BladeburnerCurAction {
     return { name: "Incite Violence", type: types.g };
 }
 
-async function tryBlackOp(ns: NS, best_op: string) {
-    const blackops = ns.bladeburner.getBlackOpNames().slice(best_op === "" ? 0 : ns.bladeburner.getBlackOpNames().indexOf(best_op) + 1);
-    for (const op of blackops) {
+async function tryBlackOp(ns: NS) {
+    for (const op of ns.bladeburner.getBlackOpNames()) {
         if (ns.bladeburner.getRank() < ns.bladeburner.getBlackOpRank(op)) break;
-        if (ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.8) {
-            if (!ns.bladeburner.startAction(types.b, op)) {
-                best_op = op;
-            } else {
-                while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
-            }
+        if (ns.bladeburner.getActionCountRemaining(types.b, op) === 1 && ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.2) {
+            ns.bladeburner.startAction(types.b, op);
+            while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
         }
     }
-    return best_op;
 }
 
 function upgradeSkills(ns: NS) {
