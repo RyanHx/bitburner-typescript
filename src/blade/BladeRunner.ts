@@ -18,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     let last_pop_analysis = 0;
     let current_city = "Sector-12";
     while (true) {
-        if (Date.now() - last_pop_analysis > (ns.bladeburner.getBonusTime() > 0 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
+        if (Date.now() - last_pop_analysis > (ns.bladeburner.getBonusTime() > 60e3 * 6 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
             current_city = await getHighestCityPop(ns);
             ns.bladeburner.switchCity(current_city);
             last_pop_analysis = Date.now();
