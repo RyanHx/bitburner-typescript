@@ -18,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     let last_pop_analysis = 0;
     let current_city = "Sector-12";
     while (true) {
-        if (Date.now() - last_pop_analysis > (ns.bladeburner.getBonusTime() > 60e3 * 6 ? 1.8e6 / 5 : 1.8e6)) { // 1.8e6ms = 30 minutes
+        if (Date.now() - last_pop_analysis > (ns.bladeburner.getBonusTime() > 6 * 60e3 ? 6 * 60e3 : 30 * 60e3)) { // 30 * 60e3ms = 30 minutes
             current_city = await getHighestCityPop(ns);
             ns.bladeburner.switchCity(current_city);
             last_pop_analysis = Date.now();
@@ -102,15 +102,26 @@ async function tryBlackOp(ns: NS) {
         if (ns.bladeburner.getRank() < ns.bladeburner.getBlackOpRank(op)) break;
         if (ns.bladeburner.getActionCountRemaining(types.b, op) === 1 && ns.bladeburner.getActionEstimatedSuccessChance(types.b, op)[0] >= 0.2) {
             ns.bladeburner.startAction(types.b, op);
-            while (ns.bladeburner.getCurrentAction().name === op) await ns.sleep(1000);
+            while (ns.bladeburner.getCurrentAction().name === op) {
+                upgradeSkills(ns);
+                await ns.sleep(1000);
+            }
         }
     }
 }
 
 function upgradeSkills(ns: NS) {
-    ns.bladeburner.upgradeSkill("Blade's Intuition");
-    ns.bladeburner.upgradeSkill("Digital Observer");
-    ns.bladeburner.upgradeSkill("Reaper");
-    ns.bladeburner.upgradeSkill("Overclock");
-    ns.bladeburner.upgradeSkill("Evasive System");
+    const skills: string[] = [
+        "Blade's Intuition",
+        "Digital Observer",
+        "Overclock",
+        "Reaper",
+        "Evasive System"
+    ];
+
+    while (ns.bladeburner.getSkillPoints() > 0) {
+        const start = ns.bladeburner.getSkillPoints();
+        for (const skill of skills) ns.bladeburner.upgradeSkill(skill);
+        if (ns.bladeburner.getSkillPoints() === start) break;
+    }
 }
