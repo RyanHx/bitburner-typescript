@@ -54,9 +54,9 @@ async function getHighestCityPop(ns: NS) {
     const city_pops: Record<string, number> = {};
     for (const city of all_cities) {
         ns.bladeburner.switchCity(city);
-        while (ns.bladeburner.getContractNames().some(contract => ns.bladeburner.getActionEstimatedSuccessChance(types.c, contract)[0] < ns.bladeburner.getActionEstimatedSuccessChance(types.c, contract)[1])) {
+        while (needsAnalysis(ns)) {
             if (ns.bladeburner.getCurrentAction().name !== tasks.fa) ns.bladeburner.startAction(types.g, tasks.fa);
-            await ns.sleep(10e3);
+            await ns.sleep(6e3);
         }
         city_pops[city] = ns.bladeburner.getCityEstimatedPopulation(city);
         ns.print(`${city}: ${city_pops[city]}`);
@@ -67,15 +67,23 @@ async function getHighestCityPop(ns: NS) {
 
 async function recoverStamina(ns: NS) {
     ns.print("Recovering stamina.");
-    const contracts = ns.bladeburner.getContractNames();
     while (ns.bladeburner.getStamina()[0] !== ns.bladeburner.getStamina()[1]) {
-        if (contracts.some(contract => ns.bladeburner.getActionEstimatedSuccessChance(types.c, contract)[0] < ns.bladeburner.getActionEstimatedSuccessChance(types.c, contract)[1])) {
+        if (needsAnalysis(ns)) {
             if (ns.bladeburner.getCurrentAction().name !== tasks.fa) ns.bladeburner.startAction(types.g, tasks.fa);
         } else if (ns.bladeburner.getCurrentAction().name !== tasks.hrc) {
             ns.bladeburner.startAction(types.g, tasks.hrc);
         }
+        upgradeSkills(ns);
         await ns.sleep(1000);
     }
+}
+
+function needsAnalysis(ns: NS) {
+    for (const contract of ns.bladeburner.getContractNames()) {
+        const chances = ns.bladeburner.getActionEstimatedSuccessChance(types.c, contract);
+        if (chances[0] < chances[1]) return true;
+    }
+    return false;
 }
 
 function getBestTask(ns: NS): BladeburnerCurAction {
