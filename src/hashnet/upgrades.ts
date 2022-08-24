@@ -35,6 +35,14 @@ export async function main(ns: NS): Promise<void> {
         } else if (ns.hacknet.numHashes() > ns.hacknet.hashCapacity() * 0.9) {
             ns.hacknet.spendHashes("Sell for Money");
         }
-        await ns.sleep(100);
+        await ns.sleep(_.clamp(4000 / hashProd(ns), 1, Number.MAX_SAFE_INTEGER)); // 4 = cost for <Sell for money>
     }
+}
+
+function hashProd(ns: NS) {
+    let prod = 0;
+    for (let i = 0; i < ns.hacknet.numNodes(); i++) {
+        prod += ns.hacknet.getNodeStats(i).production
+    }
+    return prod;
 }

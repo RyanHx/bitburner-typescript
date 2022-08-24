@@ -32,7 +32,7 @@ export async function main(ns: NS): Promise<void> {
             if (!scanned.includes(new_target) && !toScan.includes(new_target)) {
                 toScan.push(new_target);
             }
-        })
+        });
     }
 
     const pservs = ns.getPurchasedServers();
@@ -42,5 +42,5 @@ export async function main(ns: NS): Promise<void> {
         }
     });
     rooted = rooted.filter(hostname => !["home", "hacknet-node-"].some(exclude => hostname.startsWith(exclude)));
-    await ns.write("nuked.txt", rooted, "w");
+    await ns.write("nuked.txt", rooted.join(","), "w");
 }
