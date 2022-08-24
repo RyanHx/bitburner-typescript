@@ -35,7 +35,7 @@ export async function main(ns: NS): Promise<void> {
         } else if (ns.hacknet.numHashes() > ns.hacknet.hashCapacity() * 0.9) {
             ns.hacknet.spendHashes("Sell for Money");
         }
-        await ns.sleep(_.clamp(4000 / hashProd(ns), 1, Number.MAX_SAFE_INTEGER)); // 4 = cost for <Sell for money>
+        await ns.sleep(hashProd(ns) > 0 ? _.clamp(4000 / hashProd(ns), 1, Number.MAX_SAFE_INTEGER) : 1); // 4 = cost for <Sell for money>
     }
 }
 
