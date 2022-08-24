@@ -41,6 +41,6 @@ export async function main(ns: NS): Promise<void> {
             rooted.push(pserv);
         }
     });
-    rooted = rooted.filter(hostname => !["home"].includes(hostname));
+    rooted = rooted.filter(hostname => !["home", "hacknet-node-"].some(exclude => hostname.startsWith(exclude)));
     await ns.write("nuked.txt", rooted, "w");
 }
