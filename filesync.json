@@ -8,7 +8,7 @@
     "port": 12525,
     "scriptsFolder": "dist",
     "quiet": false,
-    "dry": true,
+    "dry": false,
     "definitionFile": {
         "update": false,
         "location": "src/NetScriptDefinitions.d.ts"
