@@ -1,5 +1,5 @@
 import { Corporation, Employee, NS } from '@ns';
-import { calcMaterials } from '/corp/production';
+import { calcMaterials } from 'corp/production';
 
 
 const starter_div_name = "agri-0";

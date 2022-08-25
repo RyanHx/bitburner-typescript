@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { getServerConnRoute } from '/utils/locate';
+import { getServerConnRoute } from 'utils/locate';
 
 export async function main(ns: NS): Promise<void> {
     const data = ns.flags([['F', false]]);

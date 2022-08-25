@@ -1,4 +1,4 @@
-import { copyUtils } from "/utils/copy-utils";
+import { copyUtils } from "utils/copy-utils";
 import { NS } from "@ns";
 
 export async function main(ns: NS): Promise<void> {

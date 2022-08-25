@@ -1,4 +1,4 @@
-import { RatioHack } from "/split/RatioHGW";
+import { RatioHack } from "split/RatioHGW";
 import { NS, AutocompleteData } from "@ns";
 
 /** @param {NS} ns */

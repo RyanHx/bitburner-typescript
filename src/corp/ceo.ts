@@ -1,8 +1,8 @@
 import { NS } from '@ns'
-import { startNewCorp } from '/corp/CorpStartup';
-import { Manager } from '/corp/manager'
-import { OfficeManager } from '/corp/OfficeManager';
-import { WarehouseManager } from '/corp/WarehouseManager';
+import { startNewCorp } from 'corp/CorpStartup';
+import { Manager } from 'corp/manager'
+import { OfficeManager } from 'corp/OfficeManager';
+import { WarehouseManager } from 'corp/WarehouseManager';
 
 const managers: Manager[] = [];
 export async function main(ns: NS): Promise<void> {

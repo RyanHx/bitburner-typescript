@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { GangManager } from '/gang/manager';
+import { GangManager } from 'gang/manager';
 
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");

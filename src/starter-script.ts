@@ -1,5 +1,5 @@
-import { copyUtils } from "/utils/copy-utils";
-import { list_servers } from "/utils/list_servers";
+import { copyUtils } from "utils/copy-utils";
+import { list_servers } from "utils/list_servers";
 import { NS } from "@ns";
 
 export async function main(ns: NS): Promise<void> {

@@ -1,5 +1,5 @@
 import { Employee, NS } from '@ns'
-import { Manager } from '/corp/manager';
+import { Manager } from 'corp/manager';
 
 export class OfficeManager implements Manager {
     readonly all_cities: string[] = ["Aevum", "Chongqing", "Sector-12", "New Tokyo", "Ishima", "Volhaven"];

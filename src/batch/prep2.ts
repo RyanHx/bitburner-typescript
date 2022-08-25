@@ -1,4 +1,4 @@
-import { numCycleForGrowthCorrected } from "/batch/growFromMoney.js"
+import { numCycleForGrowthCorrected } from "batch/growFromMoney.js"
 import { NS, AutocompleteData } from "@ns";
 
 export async function main(ns: NS): Promise<void> {

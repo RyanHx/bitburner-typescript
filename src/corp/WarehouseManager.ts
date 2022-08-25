@@ -1,6 +1,6 @@
 import { NS } from '@ns'
-import { Manager } from '/corp/manager';
-import { calcMaterials } from '/corp/production';
+import { Manager } from 'corp/manager';
+import { calcMaterials } from 'corp/production';
 
 export class WarehouseManager implements Manager {
     readonly all_cities: string[] = ["Aevum", "Chongqing", "Sector-12", "New Tokyo", "Ishima", "Volhaven"];
