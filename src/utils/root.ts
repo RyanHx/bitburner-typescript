@@ -1,4 +1,5 @@
-/** @param {NS} ns */
+import { NS } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     let rooted: string[] = [];
     const scanned: string[] = ["home"];

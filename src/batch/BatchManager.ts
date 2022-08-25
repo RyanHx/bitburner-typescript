@@ -1,3 +1,5 @@
+import { NS } from "@ns";
+
 export class BatchManager {
     readonly target: string;
     private readonly batch_end_times: Record<number, number[]>;

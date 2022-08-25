@@ -1,3 +1,5 @@
+import { NS, AutocompleteData } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     const args = ns.flags([["help", false]]);
     const server = <string>args._[0];

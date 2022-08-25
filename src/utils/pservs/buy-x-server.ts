@@ -1,4 +1,4 @@
-import { NS } from '@ns'
+import { NS, AutocompleteData } from '@ns'
 
 export async function main(ns: NS): Promise<void> {
     const data = ns.flags([['f', false]]);

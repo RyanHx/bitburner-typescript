@@ -1,4 +1,4 @@
-import { NS } from '@ns'
+import { NS, AutocompleteData } from '@ns'
 import { BatchManager } from '/batch/BatchManager'
 
 export async function main(ns: NS): Promise<void> {

@@ -1,3 +1,5 @@
+import { NS } from "@ns";
+
 export interface Manager {
     all_cities: string[];
     division: string;

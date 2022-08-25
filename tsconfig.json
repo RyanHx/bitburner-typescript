@@ -2,7 +2,7 @@
   "include": [
     "NetscriptDefinitions.d.ts",
     "global.d.ts",
-    "src/**/*",
+    "src/**/*"
   ],
   "compilerOptions": {
     "module": "esnext",
@@ -12,7 +12,6 @@
     "noImplicitThis": true,
     "esModuleInterop": true,
     "inlineSourceMap": true,
-    "sourceRoot": "http://localhost:8000/sources/",
     "strict": true,
     "rootDir": "src/",
     "outDir": "dist/",

@@ -1,4 +1,4 @@
-import { AutocompleteData } from "/../NetscriptDefinitions";
+import { NS, AutocompleteData } from "@ns";
 
 export async function main(ns: NS): Promise<void> {
     const flags = ns.flags([

@@ -1,4 +1,5 @@
-/** @param {NS} ns */
+import { NS } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     const server = ns.getServer()
     const ram_allowance = 0.9

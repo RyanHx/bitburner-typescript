@@ -1,4 +1,5 @@
-/** @param {NS} ns */
+import { NS } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     const root = ns.run("/utils/root.js");
     while (ns.isRunning(root) === true) {

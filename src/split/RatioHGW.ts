@@ -1,3 +1,5 @@
+import { NS } from "@ns";
+
 export class RatioHack {
     readonly #target: string;
     readonly #ratios: Record<string, number>;

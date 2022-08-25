@@ -1,6 +1,5 @@
-import { ScriptArg } from "/../NetscriptDefinitions";
+import { NS, ScriptArg, AutocompleteData } from "@ns";
 
-/** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");
     ns.tail();

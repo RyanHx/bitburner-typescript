@@ -1,4 +1,4 @@
-import { Player, Server } from "/../NetscriptDefinitions";
+import { Player, Server } from "@ns";
 
 const CONSTANTS = {
     ServerBaseGrowthRate: 1.03,

@@ -1,6 +1,6 @@
 import { numCycleForGrowthCorrected } from "/batch/growFromMoney.js"
+import { NS, AutocompleteData } from "@ns";
 
-/** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");
     ns.enableLog("exec");

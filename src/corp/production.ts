@@ -1,3 +1,5 @@
+import { NS } from "@ns";
+
 const names = ["Hardware", "Robots", "AI Cores", "Real Estate"];
 const size = [0.06, 0.5, 0.1, 0.005];
 

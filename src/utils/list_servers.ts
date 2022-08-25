@@ -1,22 +1,5 @@
-function scan(ns: NS, parent: string, server: string, list: string[]) {
-    const children = ns.scan(server);
-    for (const child of children) {
-        if (parent == child) {
-            continue;
-        }
-        list.push(child);
+import { NS } from "@ns";
 
-        scan(ns, server, child, list);
-    }
-}
-
-export function list_servers(ns: NS): string[] {
-    const list: string[] = [];
-    scan(ns, '', 'home', list);
-    return list;
-}
-
-/** @param {NS} ns **/
 export async function main(ns: NS): Promise<void> {
     const args = ns.flags([["help", false]]);
     if (args.help) {
@@ -33,4 +16,22 @@ export async function main(ns: NS): Promise<void> {
         const max = ns.getServerMaxRam(server);
         ns.tprint(`${server} is ${ns.hasRootAccess(server) ? '' : 'not '}open. ${used} GB / ${max} GB (${(100 * used / max).toFixed(2)}%)`)
     }
+}
+
+function scan(ns: NS, parent: string, server: string, list: string[]) {
+    const children = ns.scan(server);
+    for (const child of children) {
+        if (parent == child) {
+            continue;
+        }
+        list.push(child);
+
+        scan(ns, server, child, list);
+    }
+}
+
+export function list_servers(ns: NS): string[] {
+    const list: string[] = [];
+    scan(ns, '', 'home', list);
+    return list;
 }

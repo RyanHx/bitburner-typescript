@@ -1,4 +1,5 @@
-/** @param {NS} ns */
+import { NS, AutocompleteData } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     const route = getServerConnRoute(ns, <string>ns.args[0]);
     const conn_str = route.join("; connect ");

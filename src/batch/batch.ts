@@ -1,4 +1,5 @@
-/** @param {NS} ns */
+import { NS, AutocompleteData } from "@ns";
+
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");
 

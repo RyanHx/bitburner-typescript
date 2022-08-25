@@ -1,4 +1,5 @@
-import { GangMemberInfo } from "/../NetscriptDefinitions";
+import { GangMemberInfo } from "@ns";
+import { NS } from "@ns";
 
 export class GangManager {
     readonly faction: string;

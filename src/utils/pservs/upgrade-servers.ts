@@ -1,13 +1,13 @@
 import { copyUtils } from "/utils/copy-utils";
+import { NS, AutocompleteData } from "@ns";
 
-/** @param {NS} ns */
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("sleep");
     const target_ram = <number>ns.args[0];
     const purchased_servs = ns.getPurchasedServers();
     let split_target = "";
     let maxed_servers = 0;
-    
+
     while (maxed_servers < purchased_servs.length) { // Loop till all servers maxed
         for (const pserv of purchased_servs) {
             for (let ram = target_ram; ram > ns.getServerMaxRam(pserv); ram /= 2) { // Count back from largest ram
