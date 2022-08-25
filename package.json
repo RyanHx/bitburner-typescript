@@ -12,10 +12,8 @@
     "@typescript-eslint/eslint-plugin": "^5.35.1",
     "@typescript-eslint/parser": "^5.35.1",
     "bitburner-filesync": "^1.0.0",
+    "concurrently": "^7.3.0",
     "eslint": "^8.22.0",
     "typescript": "^4.7.4"
-  },
-  "dependencies": {
-    "concurrently": "^7.3.0"
   }
 }
