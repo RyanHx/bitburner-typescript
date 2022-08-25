@@ -2,7 +2,7 @@
   "name": "bitburner-typescript-template",
   "version": "0.0.0",
   "scripts": {
-    "watch": "concurrently -r \"npx bitburner-filesync\" \"npx tsc -w\"",
+    "watch": "concurrently \"npx bitburner-filesync\" \"npx tsc -w\"",
     "filesync": "npx bitburner-filesync",
     "ts:watch": "npx tsc -w"
   },
