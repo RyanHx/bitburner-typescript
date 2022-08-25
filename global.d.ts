@@ -5,8 +5,8 @@ export { };
 
 declare global {
     const _: typeof _
-    
-    interface NS extends bitburner.NS {}
+
+    interface NS extends bitburner.NS { }
 
     type AutocompleteConfig = [string, string | number | boolean | string[]][];
 
