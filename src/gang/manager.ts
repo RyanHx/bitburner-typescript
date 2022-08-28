@@ -76,8 +76,8 @@ export class GangManager {
     }
 
     #tryGainTerritory(ns: NS): void {
-        if (ns.gang.getMemberNames().length < 12 || this.#getTrainedMembers(ns).length === 0 || Object.values(ns.gang.getOtherGangInformation()).filter(g => g.territory > 0).length > 3) {
-            ns.print("Less than 12 members/none trained/still more than 2 rival gangs - avoiding war");
+        if (ns.gang.getMemberNames().length < 12 || this.#getTrainedMembers(ns).length === 0) {
+            ns.print("Less than 12 members/none trained - avoiding war");
             this.#need_power = false;
             ns.gang.setTerritoryWarfare(false);
             return;
@@ -97,9 +97,11 @@ export class GangManager {
                 ns.gang.setTerritoryWarfare(true);
             }
         } else if (lowest_clash_chance <= 0.7 || this.#need_power) {
-            ns.print("Regaining power for war");
             this.#need_power = true;
-            ns.gang.setTerritoryWarfare(false);
+            if (ns.gang.getGangInformation().territoryWarfareEngaged) {
+                ns.print("Regaining power for war");
+                ns.gang.setTerritoryWarfare(false);
+            }
             for (const member of this.#getTrainedMembers(ns)) {
                 if (member.task !== this.#tasks.tw) ns.gang.setMemberTask(member.name, this.#tasks.tw);
             }
