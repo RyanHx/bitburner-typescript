@@ -5,6 +5,7 @@
     "watch": "concurrently \"npx bitburner-filesync\" \"npx tsc -w\"",
     "filesync": "npx bitburner-filesync",
     "filesync:f": "npx bitburner-filesync --pushAllOnConnection",
+    "filesync:d": "npx bitburner-filesync --dry",
     "ts:watch": "npx tsc -w"
   },
   "author": "hydroflame, based on work by SlyCedix",
