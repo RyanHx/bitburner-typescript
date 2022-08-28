@@ -18,16 +18,16 @@ export async function main(ns: NS): Promise<void> {
     sleeve = ns.sleeve;
     let recover_chaos = true;
     let recover_contracts = true;
-    const contracts_full = (num: number) => {
+    const actionsNumAbove = (num: number) => {
         return blade.getContractNames().every(contract => blade.getActionCountRemaining(types.c, contract) > num) &&
             blade.getOperationNames().every(op => blade.getActionCountRemaining(types.o, op) > num)
     }
     while (true) {
         const city = blade.getCity();
         if (blade.getCityChaos(city) < 2) recover_chaos = false;
-        if (contracts_full(50) || blade.getCityChaos(city) >= 40) recover_contracts = false;
+        if (actionsNumAbove(50) || blade.getCityChaos(city) >= 40) recover_contracts = false;
 
-        if (!recover_chaos && (!contracts_full(20) || recover_contracts)) {
+        if (!recover_chaos && (!actionsNumAbove(20) || recover_contracts)) {
             recover_contracts = true;
             bladeAllSleeves(ns, city, tasks.is);
         } else if (blade.getBlackOpNames().some(op => blade.getActionEstimatedSuccessChance(types.b, op)[0] < blade.getActionEstimatedSuccessChance(types.b, op)[1])) {
@@ -37,7 +37,6 @@ export async function main(ns: NS): Promise<void> {
             bladeAllSleeves(ns, city, tasks.d);
         } else {
             contractAllSleeves(ns, city);
-            // await crimeAllSleeves(ns, city);
         }
         await ns.sleep(100);
     }
@@ -93,27 +92,3 @@ function tryStartCrime(ns: NS, s_index: number, crime: string) {
         sleeve.setToCommitCrime(s_index, crime);
     }
 }
-
-// async function crimeAllSleeves(ns: NS, city: string) {
-//     let assassinate = false;
-//     for (let i = 0; i < sleeve.getNumSleeves(); i++) {
-//         if (!sleeve.getTask(i) || sleeve.getTask(i).type !== 'CRIME') {
-//             const stats = ns.sleeve.getSleeveStats(i);
-//             if ([stats.agility, stats.defense, stats.strength, stats.dexterity].every(stat => stat > 1000)) {
-//                 ns.print(`Setting sleeve ${i} to Assassination`);
-//                 sleeve.setToCommitCrime(i, "Assassination");
-//                 assassinate = true;
-//             } else {
-//                 ns.print(`Setting sleeve ${i} to Homicide`);
-//                 sleeve.setToCommitCrime(i, "Homicide");
-//             }
-//         }
-//     }
-//     if (assassinate) {
-//         const wait_start = Date.now();
-//         while (Date.now() - wait_start < 300000) {
-//             if (blade.getCity() !== city) break;
-//             await ns.sleep(1000);
-//         }
-//     }
-// }
