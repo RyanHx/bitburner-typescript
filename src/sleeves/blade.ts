@@ -4,6 +4,7 @@ let blade: Bladeburner;
 let sleeve: Sleeve;
 const types = {
     c: "Contract",
+    o: "Operation",
     b: "Black Operation"
 }
 const tasks = {
@@ -17,12 +18,16 @@ export async function main(ns: NS): Promise<void> {
     sleeve = ns.sleeve;
     let recover_chaos = true;
     let recover_contracts = true;
+    const contracts_full = (num: number) => {
+        return blade.getContractNames().every(contract => blade.getActionCountRemaining(types.c, contract) > num) &&
+            blade.getOperationNames().every(op => blade.getActionCountRemaining(types.o, op) > num)
+    }
     while (true) {
         const city = blade.getCity();
         if (blade.getCityChaos(city) < 2) recover_chaos = false;
-        if (blade.getContractNames().every(contract => blade.getActionCountRemaining(types.c, contract) > 50) || blade.getCityChaos(city) >= 40) recover_contracts = false;
+        if (contracts_full(50) || blade.getCityChaos(city) >= 40) recover_contracts = false;
 
-        if (!recover_chaos && blade.getContractNames().some(contract => blade.getActionCountRemaining(types.c, contract) < 20) || recover_contracts) {
+        if (!recover_chaos && (!contracts_full(20) || recover_contracts)) {
             recover_contracts = true;
             bladeAllSleeves(ns, city, tasks.is);
         } else if (blade.getBlackOpNames().some(op => blade.getActionEstimatedSuccessChance(types.b, op)[0] < blade.getActionEstimatedSuccessChance(types.b, op)[1])) {
@@ -56,7 +61,7 @@ function bladeAllSleeves(ns: NS, city: string, task: string) {
 function contractAllSleeves(ns: NS, city: string) {
     const contracts = ns.bladeburner.getContractNames();
     let set_shock = true;
-    for (let i = 0; i < sleeve.getNumSleeves(); i++) {
+    main: for (let i = 0; i < sleeve.getNumSleeves(); i++) {
         if (sleeve.getInformation(i).city !== city) {
             ns.print(`Moving sleeve ${i} to ${city}`);
             if (!sleeve.travel(i, city)) ns.print("Failed");
@@ -68,9 +73,12 @@ function contractAllSleeves(ns: NS, city: string) {
             continue;
         }
         if ([stats.agility, stats.defense, stats.strength, stats.dexterity].every(stat => stat > 1000)) {
-            const contract = contracts.pop();
-            if (contract && ns.bladeburner.getActionCountRemaining(types.c, contract) > 300 && (sleeve.getTask(i)?.actionName?.toLowerCase() === contract.toLowerCase() || sleeve.setToBladeburnerAction(i, "Take on contracts", contract))) {
-                continue;
+            while (contracts.length > 0) {
+                const contract = contracts.pop();
+                if (contract && ns.bladeburner.getActionCountRemaining(types.c, contract) > 300 &&
+                    (sleeve.getTask(i)?.actionName?.toLowerCase() === contract.toLowerCase() || sleeve.setToBladeburnerAction(i, "Take on contracts", contract))) {
+                    continue main;
+                }
             }
             tryStartCrime(ns, i, "Assassination");
         } else {
