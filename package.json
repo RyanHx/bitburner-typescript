@@ -2,10 +2,10 @@
   "name": "bitburner-typescript-template",
   "version": "0.0.0",
   "scripts": {
-    "watch": "concurrently \"npx bitburner-filesync\" \"npx tsc -w\"",
-    "filesync": "npx bitburner-filesync",
-    "filesync:f": "npx bitburner-filesync --pushAllOnConnection",
-    "filesync:d": "npx bitburner-filesync --dry",
+    "watch": "concurrently \"npx bitburner-filesync@latest\" \"npx tsc -w\"",
+    "filesync": "npx bitburner-filesync@latest",
+    "filesync:f": "npx bitburner-filesync@latest --pushAllOnConnection",
+    "filesync:d": "npx bitburner-filesync@latest --dry",
     "ts:watch": "npx tsc -w"
   },
   "author": "hydroflame, based on work by SlyCedix",
