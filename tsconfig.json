@@ -12,6 +12,7 @@
     "rootDir": "src/",
     "outDir": "dist/",
     "baseUrl": "src/",
+    "allowJs": true,
     "paths": {
       "/*": ["*"],
       "@ns": ["../NetscriptDefinitions.d.ts"]

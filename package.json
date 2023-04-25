@@ -1,21 +1,24 @@
 {
   "name": "bitburner-typescript-template",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "scripts": {
-    "watch": "concurrently \"npx bitburner-filesync@latest\" \"npx tsc -w\"",
-    "filesync": "npx bitburner-filesync@latest",
-    "filesync:f": "npx bitburner-filesync@latest --pushAllOnConnection",
-    "filesync:d": "npx bitburner-filesync@latest --dry",
-    "ts:watch": "npx tsc -w"
+    "watch:transpile": "tsc -w --preserveWatchOutput",
+    "watch:local": "node build/watch.js",
+    "watch:remote": "bitburner-filesync",
+    "watch:init": "node build/init.js",
+    "watch:all": "concurrently npm:watch:transpile npm:watch:local npm:watch:remote",
+    "watch": "npm run watch:init && npm run watch:all"
   },
-  "author": "hydroflame, based on work by SlyCedix",
+  "author": "hydroflame, Hoekstraa, based on work by SlyCedix",
   "devDependencies": {
-    "@types/lodash": "^4.14.184",
     "@typescript-eslint/eslint-plugin": "^5.35.1",
     "@typescript-eslint/parser": "^5.35.1",
-    "bitburner-filesync": "^1.0.0",
-    "concurrently": "^7.3.0",
+    "bitburner-filesync": "^1.1.5",
+    "chokidar": "^3.5.3",
+    "concurrently": "^7.4.0",
     "eslint": "^8.22.0",
+    "fast-glob": "^3.2.12",
+    "sync-directory": "^5.1.7",
     "typescript": "^4.7.4"
   }
 }
